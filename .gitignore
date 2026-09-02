@@ -1,0 +1,28 @@
+# Credentials. Nothing in this tree holds one today — the Migma API key lives in the Spotify
+# client's local storage under `migma:settings`, never on disk — but an ignore rule only helps
+# if it is in place before the mistake, not after it.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editor and IDE state. Personal, not project configuration.
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS directory metadata.
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Throwaway verification harnesses. The token, class, contrast and purity sweeps are written,
+# run, and deleted in the same pass; an interrupted pass must not leave one in a commit.
+_*.cjs
+
+# Deliberately absent: no `node_modules/`, no `dist/`, no `build/`, no coverage or cache
+# directories. There is no dependency manager and no build step — Spicetify loads these source
+# files as they are — so a rule for any of them would be noise that hides the lines above.

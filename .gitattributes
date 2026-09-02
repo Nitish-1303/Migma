@@ -1,0 +1,7 @@
+# The object database stores LF; each working tree gets its own platform's endings on checkout,
+# so a Windows and a macOS clone produce identical blobs from identical edits. Declaring it here
+# rather than in local config means every clone inherits it instead of relying on core.autocrlf.
+* text=auto
+
+# The display face is binary. Never line-ending-normalise it, and never try to diff it as text.
+*.woff2 binary
