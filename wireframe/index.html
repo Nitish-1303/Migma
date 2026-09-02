@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en" data-fid="hifi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Migma × Spotify — Playlist-to-Email Campaign Automator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@font-face{font-family:MigmaDisplay;src:url("MigmaAIDisplayTitle-Bold.woff2") format("woff2"),url("https://migma.ai/fonts/MigmaAIDisplayTitle-Bold.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:MigmaDisplay;src:url("MigmaAIDisplayTitle-BoldItalic.woff2") format("woff2"),url("https://migma.ai/fonts/MigmaAIDisplayTitle-BoldItalic.woff2") format("woff2");font-weight:700;font-style:italic;font-display:swap}
+:root{
+ --bg:#0a0a0a;--canvas:#0f0f0f;--s1:#141414;--s2:#111111;--s3:#2a2a2a;
+ --line:#2a2a2a;--lineS:#ffffff14;
+ --tx:#ffffff;--tx2:#e2e2e3;--tx3:#939393;
+ --sp:#1ed760;--ok:#22c55e;--mg:#ffffff;--mg2:#e2e2e3;--warn:#f38c05;--err:#ef4444;
+ --spec:linear-gradient(90deg,#a649f8,#e3185f,#f74a06,#f38c05,#ffc400,#292929,#d4d3d3,#a649f8);
+ --cube:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 360'><path d='M280 0H80C35.8 0 0 35.8 0 80V280C0 324.2 35.8 360 80 360H280C324.2 360 360 324.2 360 280V80C360 35.8 324.2 0 280 0Z' fill='%23fff'/><path d='M262.8 93.7C266.8 91.2 272 94.1 272 98.8V266C272 269.3 269.3 272 266 272H93C89.7 272 87 269.3 87 266V98.8C87 94.1 92.2 91.2 96.2 93.7L176.3 143.9C178.3 145.1 180.7 145.1 182.7 143.9L262.8 93.7Z' fill='%231a1a1a'/></svg>");
+ --r1:4px;--r2:8px;--r3:12px;--r4:16px;
+ --f:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+ --fd:MigmaDisplay,var(--f);
+ --ez:cubic-bezier(.33,1,.68,1);
+}
+html{background:var(--bg)}
+body{font-family:var(--f);color:var(--tx);line-height:1.45;font-synthesis:none;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--fd);font-weight:700;letter-spacing:.5px}
+a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
+@keyframes sweep{to{background-position:300% 0}}
+.wrap{max-width:1560px;margin:0 auto;padding:44px 28px 140px}
+.board{display:flex;flex-direction:column;gap:56px}
+
+/* ---------- board chrome ---------- */
+.cover{border:1px solid var(--line);border-radius:var(--r4);padding:40px;background:
+ radial-gradient(900px 380px at 88% -10%,rgba(255,255,255,.07),transparent 60%),
+ radial-gradient(700px 300px at 4% 110%,rgba(255,255,255,.04),transparent 60%),var(--canvas)}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.cover h1{font-size:40px;line-height:1.08;margin:14px 0 12px;max-width:20ch}
+.cover h1 em{font-style:normal;background:var(--spec);background-size:300% 100%;animation:sweep 9s linear infinite;-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{color:var(--tx2);max-width:66ch;font-size:15px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.meta span{font-size:12px;color:var(--tx2);border:1px solid var(--line);border-radius:var(--r2);padding:6px 12px;background:var(--s1)}
+
+.sec{display:flex;flex-direction:column;gap:20px}
+.sechd{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--lineS);padding-bottom:12px}
+.sechd .num{font-size:12px;font-weight:700;color:var(--mg);letter-spacing:.08em}
+.sechd h2{font-size:19px}
+.sechd p{font-size:13px;color:var(--tx3);margin-left:auto;max-width:52ch;text-align:right}
+
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.frame{background:var(--canvas);border:1px solid var(--line);border-radius:var(--r3);overflow:hidden;position:relative}
+.frame>.flabel{position:absolute;top:-25px;left:2px;font-size:11px;color:var(--tx3);letter-spacing:.04em;white-space:nowrap}
+.frame>.flabel b{color:var(--tx2);font-weight:600}
+.fwrap{padding-top:26px}
+/* ---------- annotation callouts ---------- */
+.cal{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;
+ border-radius:999px;background:#fff;color:#000;font-size:11px;font-weight:700;line-height:1;
+ box-shadow:0 0 0 3px rgba(255,255,255,.14);vertical-align:middle}
+.cal.abs{position:absolute;z-index:6}
+.notes{border:1px solid var(--line);border-radius:var(--r3);background:var(--s1);padding:18px 20px;min-width:290px;flex:1 1 300px;max-width:420px}
+.notes h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:12px}
+.notes ol{list-style:none;display:flex;flex-direction:column;gap:11px}
+.notes li{font-size:13px;color:var(--tx2);display:flex;gap:10px;line-height:1.5}
+.notes li b{color:var(--tx);font-weight:600}
+
+/* ---------- generic atoms used inside frames ---------- */
+.btn{border:0;border-radius:var(--r2);font-family:var(--f);font-size:13px;font-weight:700;padding:10px 18px;cursor:default;
+ letter-spacing:.2px;color:#000;background:linear-gradient(180deg,#fff 0%,#f0f0f0 100%);
+ border-top:1px solid #e8e8e8;border-left:1px solid #e0e0e0;border-right:1px solid #ccc;border-bottom:3px solid #b0b0b0;
+ box-shadow:inset 0 1px 0 0 #ffffffe6,inset 0 -1px 1px 0 #0000000d,0 2px 4px #0000001a}
+.btn.mg{color:#fff;border:1px solid transparent;box-shadow:none;
+ background-image:linear-gradient(#101013,#101013),var(--spec);background-origin:border-box;
+ background-clip:padding-box,border-box;background-size:auto,300% 100%;animation:sweep 7s linear infinite}
+.btn.ghost{background:transparent;color:#a1a1aa;border:1px solid var(--line);box-shadow:none}
+.btn.sm{padding:7px 13px;font-size:12px;border-bottom-width:2px}
+.btn.mg.sm,.btn.ghost.sm{border-bottom-width:1px}
+.btn.block{width:100%;text-align:center}
+.btn[disabled]{opacity:.38}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#a1a1aa;
+ border:1px solid var(--line);border-radius:var(--r1);padding:5px 9px;background:#1e1e1e}
+.chip.on{color:#000;border-color:#fff;background:#fff}
+.chip.sp{color:var(--ok);border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.08)}
+.chip.ai{color:#fff;border:1px solid transparent;background-image:linear-gradient(#1e1e1e,#1e1e1e),var(--spec);
+ background-origin:border-box;background-clip:padding-box,border-box;background-size:auto,300% 100%;animation:sweep 7s linear infinite}
+.inp{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 13px;
+ font-family:var(--f);font-size:13px;color:var(--tx)}
+.inp.ph{color:var(--tx3)}
+.lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin-bottom:7px}
+.field{margin-bottom:16px}
+.hint{font-size:11px;color:var(--tx3);margin-top:6px;line-height:1.5}
+.cover-art{border-radius:var(--r1);background:linear-gradient(135deg,#232326,#535354 52%,#939393 130%);flex:none}
+.sk{background:linear-gradient(90deg,#1e1e1e 0%,var(--s3) 50%,#1e1e1e 100%);border-radius:var(--r1);height:11px}
+.divider{height:1px;background:var(--lineS);margin:16px 0}
+.stepdots{display:flex;gap:6px;align-items:center}
+.stepdots i{width:22px;height:3px;border-radius:999px;background:var(--s3);display:block}
+.stepdots i.on{background:#fff}
+.stepdots i.done{background:#535354}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:9px 0;border-bottom:1px solid var(--lineS)}
+.kv span:first-child{color:var(--tx3)}
+.kv span:last-child{color:var(--tx);font-weight:600}
+/* ---------- Spotify client shell (frame 01) ---------- */
+.shell{width:1180px;height:690px;display:grid;grid-template-columns:232px 1fr;grid-template-rows:1fr 68px;
+ background:#000;font-size:13px}
+.sbar{background:#000;padding:8px;display:flex;flex-direction:column;gap:8px;grid-row:1/3}
+.sbox{background:#121212;border-radius:var(--r2);padding:14px 12px;display:flex;flex-direction:column;gap:14px}
+.snav{display:flex;align-items:center;gap:14px;color:var(--tx2);font-weight:700;font-size:14px}
+.snav.act{color:#fff}
+.snav .ic{width:22px;height:22px;border-radius:5px;background:var(--s3);flex:none}
+.snav.migma{color:#fff;position:relative}
+.snav.migma .ic{background:var(--cube) center/100% no-repeat}
+.snav.migma:after{content:'';position:absolute;left:-12px;top:-6px;bottom:-6px;right:-10px;border:1px solid rgba(255,255,255,.28);border-radius:8px}
+.sbox.lib{flex:1;overflow:hidden}
+.plrow{display:flex;gap:10px;align-items:center}
+.plrow .cover-art{width:38px;height:38px}
+.plrow div b{display:block;font-size:13px;color:#fff;font-weight:600}
+.plrow div s{display:block;font-size:11px;color:var(--tx3);text-decoration:none}
+.main{background:linear-gradient(180deg,#232326 0%,#161618 34%,#121212 100%);grid-row:1/2;overflow:hidden;position:relative}
+.topbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 22px;background:rgba(8,8,10,.5);backdrop-filter:blur(12px)}
+.nubbin{width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);flex:none}
+.tb-title{font-weight:700;font-size:15px;margin-right:auto}
+.mgpill{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;
+ background:#161616;border:1px solid #2a2a2a;color:#e2e2e3;position:relative;letter-spacing:.3px}
+.mgpill .dot{width:14px;height:14px;background:var(--cube) center/100% no-repeat}
+.plhead{display:flex;gap:22px;align-items:flex-end;padding:14px 26px 22px}
+.plhead .cover-art{width:150px;height:150px;box-shadow:0 8px 34px rgba(0,0,0,.6)}
+.plhead .t{font-size:44px;line-height:1;margin:8px 0 12px;font-weight:800;letter-spacing:-.03em}
+.plsub{font-size:12px;color:var(--tx2)}
+.plctl{display:flex;align-items:center;gap:18px;padding:0 26px 14px;position:relative}
+.playbig{width:52px;height:52px;border-radius:50%;background:var(--sp)}
+.icobtn{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);color:var(--tx2);
+ display:grid;place-items:center;font-size:15px;font-weight:700}
+.ctxmenu{position:absolute;left:150px;top:44px;width:262px;background:#282828;border-radius:var(--r1);
+ padding:5px;box-shadow:0 14px 44px rgba(0,0,0,.7);z-index:5}
+.ctxmenu i{display:flex;align-items:center;gap:11px;padding:10px 11px;font-size:13px;font-style:normal;color:#e8e8ec;border-radius:3px}
+.ctxmenu i.hl{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.ctxmenu i .sq{width:15px;height:15px;border-radius:4px;background:var(--s3);flex:none}
+.ctxmenu i.hl .sq{background:var(--cube) center/100% no-repeat}
+.tracklist{padding:0 26px}
+.trow{display:grid;grid-template-columns:22px 1fr 130px 44px;gap:14px;align-items:center;padding:8px 0;font-size:12px;color:var(--tx2)}
+.trow .cover-art{width:34px;height:34px}
+.trow .tn{display:flex;gap:11px;align-items:center}
+.trow .tn b{color:#fff;font-weight:500;font-size:13px}
+.nowbar{grid-column:1/3;background:#000;border-top:1px solid #191919;display:flex;align-items:center;gap:14px;padding:0 18px}
+.nowbar .cover-art{width:52px;height:52px}
+.nowbar .prog{flex:1;height:4px;border-radius:2px;background:#4d4d4d;position:relative;max-width:520px;margin:0 auto}
+.nowbar .prog b{position:absolute;inset:0 62% 0 0;background:#fff;border-radius:2px;display:block}
+/* ---------- Migma panel ---------- */
+.panel{width:452px;height:686px;display:flex;flex-direction:column;background:var(--canvas)}
+.panel.wide{width:928px}
+.phead{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--lineS);flex:none;background:#0a0a0a}
+.mark{width:26px;height:26px;background:var(--cube) center/100% no-repeat;flex:none}
+.phead .ttl{font-family:var(--fd);font-size:14px;font-weight:700;letter-spacing:.5px}
+.phead .ttl s{display:block;font-family:var(--f);font-size:11px;color:var(--tx3);text-decoration:none;font-weight:500;letter-spacing:0}
+.phead .sp-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pbody{padding:18px;overflow:hidden;flex:1;display:flex;flex-direction:column;gap:16px}
+.pfoot{padding:13px 18px;border-top:1px solid var(--lineS);display:flex;gap:10px;align-items:center;flex:none;background:#0a0a0a}
+.pfoot .sp-r{margin-left:auto}
+.h-lg{font-family:var(--fd);font-size:22px;letter-spacing:.5px;line-height:1.2}
+.h-md{font-family:var(--fd);font-size:15px;letter-spacing:.5px}
+.sub{font-size:12.5px;color:var(--tx3);line-height:1.55}
+
+.srccard{display:flex;gap:13px;align-items:center;border:1px solid var(--line);border-radius:var(--r3);padding:13px;background:var(--s1)}
+.srccard.sel{border-color:#fff;background:rgba(255,255,255,.05)}
+.srccard .cover-art{width:56px;height:56px}
+.srccard b{font-size:14px;display:block}
+.srccard s{text-decoration:none;font-size:11.5px;color:var(--tx3);display:block;margin-top:3px}
+
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.tile{border:1px solid var(--line);border-radius:var(--r2);padding:11px;background:var(--s1)}
+.tile b{display:block;font-family:var(--fd);font-size:19px;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+.tile s{text-decoration:none;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);display:block;margin-top:4px}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:104px 1fr 34px;gap:10px;align-items:center;font-size:12px}
+.bar em{font-style:normal;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .tr{height:6px;border-radius:3px;background:var(--s2);overflow:hidden}
+.bar .tr b{display:block;height:100%;border-radius:3px;background:var(--spec);background-size:300% 100%;animation:sweep 7s linear infinite}
+.bar u{text-decoration:none;color:var(--tx3);text-align:right;font-variant-numeric:tabular-nums}
+.spark{display:flex;gap:5px;align-items:flex-end;height:52px}
+.spark i{flex:1;background:linear-gradient(180deg,#e2e2e3,rgba(83,83,84,0));border-radius:3px 3px 0 0;position:relative}
+.spark i s{position:absolute;bottom:-17px;left:0;right:0;text-align:center;font-size:9.5px;color:var(--tx3);text-decoration:none}
+
+.idea{border:1px solid var(--line);border-radius:var(--r3);padding:14px;background:var(--s1);position:relative}
+.idea.sel{border-color:#fff;background:rgba(255,255,255,.05);box-shadow:0 0 0 1px var(--mg) inset}
+.idea .top{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+.idea .top b{font-size:13.5px;font-weight:700}
+.idea .top .conf{margin-left:auto;font-size:10px;color:var(--tx3);letter-spacing:.05em}
+.idea .subj{font-size:13px;color:#fff;background:var(--s2);border-left:2px solid var(--mg);border-radius:0 var(--r1) var(--r1) 0;padding:8px 10px;margin-bottom:8px}
+.idea .subj s{display:block;text-decoration:none;font-size:11px;color:var(--tx3);margin-top:3px}
+.idea p{font-size:12px;color:var(--tx2);line-height:1.55}
+.idea .foot{display:flex;gap:6px;margin-top:10px;align-items:center}
+/* ---------- canvas (split brief / preview) ---------- */
+.split{display:grid;grid-template-columns:352px 1fr;flex:1;overflow:hidden}
+.brief{padding:18px;border-right:1px solid var(--lineS);overflow:hidden}
+.seg{display:flex;background:#141414;border:1px solid #2e2e32;border-radius:var(--r2);padding:3px}
+.seg i{flex:1;text-align:center;font-style:normal;font-size:11.5px;font-weight:600;color:#a1a1aa;padding:7px 4px;border-radius:var(--r1)}
+.seg i.on{background:var(--s3);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.range{height:4px;border-radius:999px;background:var(--s2);position:relative;margin:14px 2px}
+.range b{position:absolute;left:0;top:0;bottom:0;width:52%;background:#fff;border-radius:999px}
+.range u{position:absolute;left:52%;top:50%;width:15px;height:15px;margin:-7.5px 0 0 -7.5px;border-radius:50%;background:#fff;text-decoration:none;box-shadow:0 1px 5px rgba(0,0,0,.6)}
+.rlbl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx3)}
+.tog{width:38px;height:22px;border-radius:999px;background:var(--s3);border:1px solid #2e2e32;position:relative;flex:none}
+.tog b{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#8a8a8d}
+.tog.on{background:#fff;border-color:#fff}
+.tog.on b{left:18px;background:#0a0a0a}
+.trow2{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--lineS);font-size:12.5px}
+.trow2 .tog{margin-left:auto}
+.swatch{width:22px;height:22px;border-radius:var(--r1);background:#1d1e20;border:1px solid rgba(255,255,255,.15);flex:none}
+.ta{background:var(--s2);border:1px solid #2e2e32;border-radius:var(--r2);padding:11px;font-size:12px;color:var(--tx2);line-height:1.6;height:104px;overflow:hidden}
+
+.preview{padding:18px;background:#0a0a0a;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.pvbar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--tx3)}
+.pvbar .sp-r{margin-left:auto;display:flex;gap:6px}
+.email{background:#fff;color:#18181b;border-radius:var(--r3);overflow:hidden;flex:1;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+.esubj{padding:13px 18px;border-bottom:1px solid #e5e5e8;font-size:13px}
+.esubj b{display:block;font-family:var(--fd);font-size:14.5px;font-weight:700;letter-spacing:.5px;color:#18181b}
+.esubj s{text-decoration:none;color:#71717a;font-size:11.5px;display:block;margin-top:3px}
+.ebody{padding:18px}
+.ehero{height:118px;border-radius:8px;background:linear-gradient(135deg,#232326,#535354 52%,#939393 130%);margin-bottom:15px}
+.ebody h3{font-family:var(--fd);font-size:19px;color:#18181b;letter-spacing:.5px;margin-bottom:9px;line-height:1.25}
+.ebody p{font-size:12.5px;color:#52525b;line-height:1.65;margin-bottom:11px}
+.caret{display:inline-block;width:2px;height:13px;background:#18181b;vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.etl{border:1px solid #e4e4e7;border-radius:8px;overflow:hidden;margin-bottom:15px}
+.etl .er{display:flex;align-items:center;gap:11px;padding:9px 12px;border-bottom:1px solid #f4f4f5;font-size:12px}
+.etl .er:last-child{border:0}
+.etl .er .sq{width:32px;height:32px;border-radius:4px;background:linear-gradient(135deg,#d4d4d8,#71717a);flex:none}
+.etl .er b{color:#18181b;font-weight:600;display:block}
+.etl .er s{text-decoration:none;color:#71717a;font-size:11px;display:block}
+.etl .er u{margin-left:auto;text-decoration:none;color:#71717a;font-size:11px;font-variant-numeric:tabular-nums}
+.ecta{display:block;text-align:center;background:#1d1e20;color:#fff;font-weight:700;font-size:13px;padding:14px;border-radius:8px}
+.efoot{padding:14px 18px;background:#f8f8fa;border-top:1px solid #e4e4e7;font-size:10.5px;color:#71717a;text-align:center;line-height:1.7}
+/* ---------- states, spec, flow ---------- */
+.mini{width:300px;height:330px}
+.state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;text-align:center;height:100%;padding:26px}
+.glyph{width:46px;height:46px;border-radius:var(--r3);display:grid;place-items:center;font-family:var(--fd);font-size:20px;font-weight:700;
+ background:#1e1e1e;border:1px solid var(--line);color:var(--tx3)}
+.glyph.err{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);color:var(--err)}
+.glyph.warn{border-color:rgba(243,140,5,.4);background:rgba(243,140,5,.06);color:var(--warn)}
+.glyph.mg{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:#fff}
+.state b{font-family:var(--fd);font-size:14px;letter-spacing:.5px}
+.state p{font-size:12px;color:var(--tx3);max-width:30ch;line-height:1.55}
+.spin{width:26px;height:26px;border-radius:50%;border:2px solid var(--s3);border-top-color:var(--mg);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.specgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:18px}
+.card{border:1px solid var(--line);border-radius:var(--r3);background:var(--s1);padding:18px}
+.card h4{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin-bottom:14px}
+.sw{display:flex;align-items:center;gap:11px;padding:7px 0;font-size:12px}
+.sw i{width:26px;height:26px;border-radius:6px;flex:none;border:1px solid rgba(255,255,255,.08)}
+.sw b{font-weight:600}
+.sw u{margin-left:auto;text-decoration:none;color:var(--tx3);font-family:ui-monospace,monospace;font-size:11px}
+.tscale div{padding:7px 0;border-bottom:1px solid var(--lineS);display:flex;align-items:baseline;gap:12px}
+.tscale u{text-decoration:none;margin-left:auto;font-size:10.5px;color:var(--tx3);font-family:ui-monospace,monospace;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);padding:0 8px 9px 0;font-weight:600}
+td{padding:8px 8px 8px 0;border-top:1px solid var(--lineS);color:var(--tx2);vertical-align:top}
+td b{color:var(--tx);font-weight:600}
+code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospace;font-size:11.5px;color:#e2e2e3;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px}
+
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:22px;border:1px solid var(--line);border-radius:var(--r3);background:var(--s1)}
+.node{border:1px solid var(--line);border-radius:var(--r2);padding:10px 13px;font-size:12px;background:var(--canvas);white-space:nowrap}
+.node b{display:block;font-size:12.5px}
+.node s{text-decoration:none;font-size:10.5px;color:var(--tx3)}
+.node.key{border-color:#fff;background:rgba(255,255,255,.06)}
+.node.term{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
+.arw{color:var(--tx3);font-size:15px}
+
+/* ---------- fidelity toggle ---------- */
+.bar-top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:11px 16px;margin:-44px -28px 30px;
+ background:rgba(10,10,10,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--lineS)}
+.bar-top b{font-family:var(--fd);font-size:12.5px;letter-spacing:.5px}
+.bar-top .sp-r{margin-left:auto;display:flex;gap:8px}
+.tgl{border:1px solid var(--line);background:var(--s1);color:#a1a1aa;font-family:var(--f);font-size:11.5px;font-weight:600;
+ padding:7px 13px;border-radius:var(--r2);cursor:pointer}
+.tgl.on{border-color:#fff;color:#000;background:#fff}
+[data-fid="wire"] .frame{filter:grayscale(1) contrast(.92) brightness(1.04)}
+[data-fid="wire"] .cover-art,[data-fid="wire"] .ehero,[data-fid="wire"] .etl .er .sq{
+ background:repeating-linear-gradient(45deg,#2a2a2a 0 6px,#1e1e1e 6px 12px)!important}
+[data-fid="wire"] .email{background:#f4f4f5}
+[data-fid="wire"] .btn,[data-fid="wire"] .ecta{border:1px dashed rgba(0,0,0,.35)}
+@media print{.bar-top{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="bar-top">
+  <span class="mark" style="width:22px;height:22px"></span>
+  <b>Migma × Spotify — Playlist-to-Email Campaign Automator</b>
+  <span class="sp-r">
+    <button class="tgl" id="t-wire">Wireframe</button>
+    <button class="tgl on" id="t-hifi">Hi-fi</button>
+  </span>
+</div>
+
+<div class="board">
+
+<section class="cover">
+  <div class="eyebrow">Spicetify custom app</div>
+  <h1>Playlist&#8209;to&#8209;Email <em>Campaign Automator</em></h1>
+  <p class="lede">Turn any Spotify playlist into a ready-to-send Migma email campaign without leaving the client.
+  Migma reads the playlist's metadata, derives an audience digest, proposes campaign angles, then streams a
+  finished email into a live preview that pushes straight back to a Migma project.</p>
+  <div class="meta">
+    <span>Surface — Spicetify custom app + topbar button + playlist context menu</span>
+    <span>Theme — Spotify dark shell, Migma tokens verbatim</span>
+    <span>Six-step wizard · five recovery states</span>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sechd"><span class="num">00</span><h2>Flow</h2>
+    <p>Six views, one reversible path, four of them counted in the stepper. Every step is deep-linkable so the context&nbsp;menu can jump straight to the digest.</p></div>
+  <div class="flow">
+    <div class="node"><b>Entry</b><s>nav · topbar · context menu</s></div><span class="arw">→</span>
+    <div class="node key"><b>1 · Connect</b><s>key + project</s></div><span class="arw">→</span>
+    <div class="node key"><b>2 · Source</b><s>pick playlist</s></div><span class="arw">→</span>
+    <div class="node key"><b>3 · Digest</b><s>derived metrics</s></div><span class="arw">→</span>
+    <div class="node key"><b>4 · Ideas</b><s>AI angles</s></div><span class="arw">→</span>
+    <div class="node key"><b>5 · Canvas</b><s>brief + stream</s></div><span class="arw">→</span>
+    <div class="node term"><b>6 · Deliver</b><s>save · copy · export</s></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sechd"><span class="num">01</span><h2>Entry points</h2>
+    <p>Three ways in, all landing on the same route. Nothing about the stock client moves or breaks.</p></div>
+  <div class="row">
+    <div class="fwrap">
+    <div class="frame">
+      <div class="flabel"><b>01 · Client shell</b> — 1180 × 690 · entry points in place</div>
+      <div class="shell">
+        <div class="sbar">
+          <div class="sbox">
+            <div class="snav act"><i class="ic"></i>Home</div>
+            <div class="snav"><i class="ic"></i>Search</div>
+            <div class="snav migma"><i class="ic"></i>Migma <span class="cal" style="margin-left:auto">1</span></div>
+          </div>
+          <div class="sbox lib">
+            <div class="snav" style="font-size:13px">Your Library</div>
+            <div class="plrow"><i class="cover-art"></i><div><b>Late Night Static</b><s>Playlist · Nitish</s></div></div>
+            <div class="plrow"><i class="cover-art" style="filter:hue-rotate(60deg)"></i><div><b>Basement Shoegaze</b><s>Playlist · Nitish</s></div></div>
+            <div class="plrow"><i class="cover-art" style="filter:hue-rotate(-70deg)"></i><div><b>Sunday Drift</b><s>Playlist · Nitish</s></div></div>
+            <div class="plrow"><i class="cover-art" style="filter:hue-rotate(140deg)"></i><div><b>Release Radar</b><s>Playlist · Spotify</s></div></div>
+          </div>
+        </div>
+        <div class="main">
+          <div class="topbar">
+            <i class="nubbin"></i><i class="nubbin"></i>
+            <span class="tb-title">Late Night Static</span>
+            <span class="mgpill"><i class="dot"></i>Campaign<span class="cal abs" style="top:-9px;right:-9px">2</span></span>
+            <i class="nubbin" style="border-radius:999px;width:auto;padding:0 12px;height:30px;line-height:30px;font-size:11px;color:var(--tx2)">Nitish</i>
+          </div>
+          <div class="plhead">
+            <i class="cover-art"></i>
+            <div>
+              <span class="plsub">Public playlist</span>
+              <div class="t">Late Night Static</div>
+              <span class="plsub">Nitish · 4,213 followers · 128 songs, 8 hr 12 min</span>
+            </div>
+          </div>
+          <div class="plctl">
+            <i class="playbig"></i>
+            <i class="icobtn">+</i>
+            <i class="icobtn" style="border-color:var(--mg);color:var(--mg2)">···</i>
+            <div class="ctxmenu">
+              <i><span class="sq"></span>Add to queue</i>
+              <i><span class="sq"></span>Edit details</i>
+              <i class="hl"><span class="sq"></span>Create Migma campaign<span class="cal" style="margin-left:auto">3</span></i>
+              <i><span class="sq"></span>Copy link to playlist</i>
+            </div>
+          </div>
+          <div class="tracklist">
+            <div class="trow"><span>1</span><span class="tn"><i class="cover-art"></i><span><b>Glass Ceiling</b><br>Paravel</span></span><span>Blue Hour</span><span>3:42</span></div>
+            <div class="trow"><span>2</span><span class="tn"><i class="cover-art" style="filter:hue-rotate(40deg)"></i><span><b>Nightbus</b><br>Sorrel Kane</span></span><span>Nightbus EP</span><span>4:05</span></div>
+            <div class="trow"><span>3</span><span class="tn"><i class="cover-art" style="filter:hue-rotate(-40deg)"></i><span><b>Wash</b><br>Hollow Coast</span></span><span>Undertow</span><span>2:58</span></div>
+          </div>
+        </div>
+        <div class="nowbar">
+          <i class="cover-art"></i>
+          <div style="font-size:12px"><b style="display:block">Nightbus</b><s style="color:var(--tx3);text-decoration:none;font-size:11px">Sorrel Kane</s></div>
+          <div class="prog"><b></b></div>
+          <i class="nubbin" style="width:auto;padding:0 10px;height:26px;border-radius:6px"></i>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="notes">
+      <h4>Notes</h4>
+      <ol>
+        <li><span class="cal">1</span><span><b>Sidebar nav item.</b> Registered as a custom app, so it behaves like a first-class page with real history and a deep-linkable route.</span></li>
+        <li><span class="cal">2</span><span><b>Topbar button.</b> Context-aware label. On a playlist page it reads <b>Campaign</b> and carries that playlist straight into the digest; anywhere else it reads <b>Migma</b> and opens the source picker.</span></li>
+        <li><span class="cal">3</span><span><b>Context menu item.</b> Only appears on playlist URIs. Skips the picker entirely and lands on the digest.</span></li>
+        <li><span class="cal">·</span><span>A green dot replaces the Migma mark on the topbar pill while a campaign is streaming, so the user can navigate away and come back.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sechd"><span class="num">02</span><h2>Connect &amp; source</h2>
+    <p>One-time auth, then a source picker that defaults to whatever the user is already looking at.</p></div>
+  <div class="row">
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>02 · Connect</b> — 452 × 686 · first run</div>
+      <div class="panel">
+        <div class="phead"><i class="mark"></i><div class="ttl">Migma<s>Not connected</s></div>
+          <span class="sp-r"><span class="chip">Settings</span></span></div>
+        <div class="pbody">
+          <div>
+            <div class="h-lg">Connect Migma</div>
+            <p class="sub" style="margin-top:7px">Paste a workspace API key to let Migma read this playlist and draft campaigns against your projects.</p>
+          </div>
+          <div>
+            <div class="field">
+              <label class="lbl">API key</label>
+              <div class="inp">••••••••••••••••••••••3f9a</div>
+              <div class="hint">Migma → Settings → Developer → API keys. <a href="#">Open docs ↗</a></div>
+            </div>
+            <div class="field">
+              <label class="lbl">Workspace project</label>
+              <div class="inp" style="display:flex;align-items:center"><span>Sorrel Kane — Artist</span><span style="margin-left:auto;color:var(--tx3)">▾</span></div>
+              <div class="hint">Generated campaigns are saved as drafts here.<span class="cal" style="margin-left:6px">5</span></div>
+            </div>
+            <button class="btn mg block">Connect</button>
+          </div>
+          <div style="margin-top:auto">
+            <div class="divider"></div>
+            <p class="hint" style="margin:0">The key is stored in the Spotify client's local storage on this machine and is sent only to <code>api.migma.ai</code>. Clearing it in Settings revokes local access immediately.<span class="cal" style="margin-left:6px">4</span></p>
+          </div>
+        </div>
+        <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i><i></i></span>
+          <span class="sp-r"><span class="chip">Step 1 of 4</span></span></div>
+      </div>
+    </div></div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>03 · Source</b> — 452 × 686 · playlist picker</div>
+      <div class="panel">
+        <div class="phead"><i class="mark"></i><div class="ttl">Migma<s>Sorrel Kane — Artist</s></div>
+          <span class="sp-r"><span class="chip sp">Connected</span></span></div>
+        <div class="pbody">
+          <div><div class="h-md">Campaign source</div>
+            <p class="sub" style="margin-top:6px">Pick the playlist this campaign is built from.</p></div>
+          <div>
+            <label class="lbl">Detected on screen</label>
+            <div class="srccard sel">
+              <i class="cover-art"></i>
+              <div style="min-width:0"><b>Late Night Static</b><s>Nitish · 128 tracks · 4,213 followers</s></div>
+              <span class="chip on" style="margin-left:auto">Selected<span class="cal" style="margin-left:5px">6</span></span>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Or choose another</label>
+            <div class="inp ph" style="margin-bottom:11px">Search your playlists…</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div class="srccard" style="padding:10px"><i class="cover-art" style="width:42px;height:42px;filter:hue-rotate(60deg)"></i>
+                <div><b style="font-size:13px">Basement Shoegaze</b><s>62 tracks · 1,105 followers</s></div></div>
+              <div class="srccard" style="padding:10px"><i class="cover-art" style="width:42px;height:42px;filter:hue-rotate(-70deg)"></i>
+                <div><b style="font-size:13px">Sunday Drift</b><s>44 tracks · 318 followers</s></div></div>
+              <div class="srccard" style="padding:10px"><i class="cover-art" style="width:42px;height:42px;filter:hue-rotate(160deg)"></i>
+                <div><b style="font-size:13px">Warehouse Hours</b><s>91 tracks · 2,740 followers</s></div></div>
+            </div>
+          </div>
+          <div style="margin-top:auto"><p class="hint" style="margin:0">Collaborative and private playlists work too. Followers are read from the playlist, not from your audience list.</p></div>
+        </div>
+        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="on"></i><i></i><i></i></span>
+          <span class="sp-r"><button class="btn mg sm">Analyse playlist</button></span></div>
+      </div>
+    </div></div>
+    <div class="notes">
+      <h4>Notes</h4>
+      <ol>
+        <li><span class="cal">4</span><span><b>Key storage is disclosed in-frame.</b> Local storage in the Spotify client is plain text on disk — say so rather than implying a keychain. A scoped, revocable key is the mitigation.</span></li>
+        <li><span class="cal">5</span><span><b>Project select is disabled</b> until the key validates, then populated from <code>GET /v1/projects</code>. Failed validation shows inline under the key field, not as a toast.</span></li>
+        <li><span class="cal">6</span><span><b>On-screen playlist wins.</b> Read from the current route first, falling back to the playing context, then to nothing. Never silently guess a different playlist.</span></li>
+        <li><span class="cal">·</span><span>Reachable states: nothing detected → the picker becomes the primary block; no playlists at all → empty state in frame 08.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+<section class="sec">
+  <div class="sechd"><span class="num">03</span><h2>Audience digest &amp; ideas</h2>
+    <p>The digest is the whole bet: it is the only thing Migma is told about the playlist, so it has to be legible.</p></div>
+  <div class="row">
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>04 · Digest</b> — 452 × 686 · derived client-side</div>
+      <div class="panel">
+        <div class="phead"><i class="mark"></i><div class="ttl">Late Night Static<s>Audience digest</s></div>
+          <span class="sp-r"><span class="chip">Change</span></span></div>
+        <div class="pbody">
+          <div class="tiles">
+            <div class="tile"><b>128</b><s>Tracks</s></div>
+            <div class="tile"><b>8:12</b><s>Runtime</s></div>
+            <div class="tile"><b>47</b><s>Artists</s></div>
+            <div class="tile"><b>62</b><s>Popularity</s></div>
+          </div>
+          <div>
+            <label class="lbl">Top genres <span class="cal" style="margin-left:4px">7</span></label>
+            <div class="bars">
+              <div class="bar"><em>indie sleaze</em><span class="tr"><b style="width:88%"></b></span><u>22%</u></div>
+              <div class="bar"><em>bedroom pop</em><span class="tr"><b style="width:72%"></b></span><u>18%</u></div>
+              <div class="bar"><em>shoegaze</em><span class="tr"><b style="width:56%"></b></span><u>14%</u></div>
+              <div class="bar"><em>dream pop</em><span class="tr"><b style="width:44%"></b></span><u>11%</u></div>
+              <div class="bar"><em>post-punk</em><span class="tr"><b style="width:36%"></b></span><u>9%</u></div>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Release era</label>
+            <div class="spark" style="margin-bottom:20px">
+              <i style="height:100%"><s>2020s</s></i><i style="height:44%"><s>2010s</s></i>
+              <i style="height:14%"><s>2000s</s></i><i style="height:7%"><s>90s</s></i><i style="height:4%"><s>older</s></i>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Audience tags</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip on">night listeners</span><span class="chip on">discovery-forward</span>
+              <span class="chip on">long-session</span><span class="chip">low-mainstream</span>
+            </div>
+            <p class="hint">Derived from playlist metadata, artist genres and release dates. No audio-features call — that endpoint is deprecated for new clients.<span class="cal" style="margin-left:5px">8</span></p>
+          </div>
+        </div>
+        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="done"></i><i class="on"></i><i></i></span>
+          <span class="sp-r"><button class="btn mg sm">Generate ideas</button></span></div>
+      </div>
+    </div></div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>05 · Ideas</b> — 452 × 686 · three angles, one selected</div>
+      <div class="panel">
+        <div class="phead"><i class="mark"></i><div class="ttl">Campaign ideas<s>From 128 tracks · 47 artists</s></div>
+          <span class="sp-r"><span class="chip">↻ Regenerate</span></span></div>
+        <div class="pbody" style="gap:11px">
+          <div class="idea sel">
+            <div class="top"><b>The 2am Playlist Drop</b><span class="conf">STRONG MATCH</span></div>
+            <div class="subj">It's 2am somewhere 🌙<s>Preheader — 128 tracks for the hours that don't count.</s></div>
+            <p>Leans on the late-night listening skew. Opens with the hour, not the music, then hands over the playlist as a place to be.</p>
+            <div class="foot"><span class="chip on">night listeners</span><span class="chip">CTA · Listen now</span></div>
+          </div>
+          <div class="idea">
+            <div class="top"><b>47 Artists, One Mood</b><span class="conf">GOOD MATCH</span></div>
+            <div class="subj">We found your next favourite band<s>Preheader — Five names you haven't heard, picked from one playlist.</s></div>
+            <p>Discovery framing for the low-mainstream tag. Foregrounds five least-popular artists as the reward.</p>
+            <div class="foot"><span class="chip">discovery-forward</span><span class="chip">CTA · Meet the artists</span></div>
+          </div>
+          <div class="idea">
+            <div class="top"><b>Shoegaze Revival Digest</b><span class="conf">FAIR MATCH</span></div>
+            <div class="subj">Loud, blurry, beautiful<s>Preheader — The 14% of this playlist that owes everything to 1991.</s></div>
+            <p>Genre-loyalist angle. Narrower reach, highest expected click-through on the segment it does hit.</p>
+            <div class="foot"><span class="chip">genre loyalists</span><span class="chip">CTA · Read the digest</span></div>
+          </div>
+          <div style="margin-top:auto"><a href="#" style="font-size:12px">Skip ideas — write my own brief →</a></div>
+        </div>
+        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="done"></i><i class="done"></i><i class="on"></i></span>
+          <span class="sp-r"><button class="btn mg sm">Open canvas</button></span></div>
+      </div>
+    </div></div>
+    <div class="notes">
+      <h4>Notes</h4>
+      <ol>
+        <li><span class="cal">7</span><span><b>Genre percentages are share of tracks</b>, not share of artists, so a prolific artist doesn't distort the read. Ties broken by artist follower count.</span></li>
+        <li><span class="cal">8</span><span><b>No fake mood science.</b> Energy/valence scoring would need <code>audio-features</code>, which Spotify closed to new clients — the tags come from genre and era instead and the panel says so.</span></li>
+        <li><span class="cal">9</span><span><b>Cards are radio, not checkbox.</b> Exactly one angle carries into the canvas; the other two stay retrievable via back.</span></li>
+        <li><span class="cal">·</span><span>Match strength is Migma's own confidence, passed through verbatim. If the field is missing, the label is hidden rather than defaulted.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+<section class="sec">
+  <div class="sechd"><span class="num">04</span><h2>Campaign canvas</h2>
+    <p>Brief on the left, live email on the right. Output streams in token by token so a long generation never looks stalled.</p></div>
+  <div class="row">
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>06 · Canvas</b> — 928 × 686 · streaming</div>
+      <div class="panel wide">
+        <div class="phead"><i class="mark"></i><div class="ttl">The 2am Playlist Drop<s>Late Night Static · night listeners</s></div>
+          <span class="sp-r"><span class="chip">Back to ideas</span><span class="chip on">Generating…</span></span></div>
+        <div class="split">
+          <div class="brief">
+            <div class="field"><label class="lbl">Tone</label>
+              <div class="seg"><i>Warm</i><i class="on">Direct</i><i>Playful</i><i>Editorial</i></div></div>
+            <div class="field"><label class="lbl">Length</label>
+              <div class="range"><b></b><u></u></div>
+              <div class="rlbl"><span>Short</span><span>Standard</span><span>Long</span></div></div>
+            <div class="field"><label class="lbl">Segment</label>
+              <div class="inp" style="display:flex"><span>Night listeners — 3,180 est.</span><span style="margin-left:auto;color:var(--tx3)">▾</span></div></div>
+            <div class="field"><label class="lbl">Call to action</label>
+              <div class="inp" style="margin-bottom:8px">Listen now</div>
+              <div class="inp ph">https://open.spotify.com/playlist/…</div></div>
+            <div class="trow2">Brand colour<span class="swatch"></span></div>
+            <div class="trow2">Include tracklist<span class="tog on"><b></b></span></div>
+            <div class="trow2" style="border:0">Include cover art<span class="tog on"><b></b></span></div>
+            <div class="field" style="margin-top:14px"><label class="lbl">Brief sent to Migma <span class="cal" style="margin-left:4px">10</span></label>
+              <div class="ta">Write a direct, standard-length campaign email for the playlist “Late Night Static” (128 tracks, 47 artists, 8h 12m). Audience skews night listeners, discovery-forward, low-mainstream. Dominant genres: indie sleaze, bedroom pop, shoegaze. Angle: the 2am playlist drop. CTA “Listen now”.</div></div>
+          </div>
+          <div class="preview">
+            <div class="pvbar"><span>Live preview</span>
+              <span class="sp-r"><span class="chip">Desktop</span><span class="chip">Mobile</span><span class="chip">HTML</span></span></div>
+            <div class="email">
+              <div class="esubj"><b>It's 2am somewhere 🌙</b><s>128 tracks for the hours that don't count.</s></div>
+              <div class="ebody">
+                <div class="ehero"></div>
+                <h3>The hours that don't count</h3>
+                <p>Nobody makes good decisions at 2am, and nobody needs to. Late Night Static is eight hours long on purpose — it is built to be left running past the point where you stop choosing songs.</p>
+                <p>Forty-seven artists, most of whom you have not heard of yet, and a few you will play twice<span class="caret"></span></p>
+                <div class="etl">
+                  <div class="er"><i class="sq"></i><span><b>Glass Ceiling</b><s>Paravel</s></span><u>3:42</u></div>
+                  <div class="er"><i class="sq"></i><span><b>Nightbus</b><s>Sorrel Kane</s></span><u>4:05</u></div>
+                  <div class="er"><i class="sq"></i><span><b>Wash</b><s>Hollow Coast</s></span><u>2:58</u></div>
+                  <div class="er"><i class="sq"></i><span><b>Static Bloom</b><s>Meridian Youth</s></span><u>5:11</u></div>
+                </div>
+                <span class="ecta">Listen now</span>
+              </div>
+              <div class="efoot">Sent by Sorrel Kane via Migma · Unsubscribe · Update preferences</div>
+            </div>
+          </div>
+        </div>
+        <div class="pfoot"><span class="chip">1,204 chars · ~48s read</span>
+          <span class="sp-r" style="display:flex;gap:9px"><button class="btn ghost sm">Stop</button><button class="btn mg sm">Save to Migma</button></span></div>
+      </div>
+    </div></div>
+    <div class="notes" style="max-width:340px">
+      <h4>Notes</h4>
+      <ol>
+        <li><span class="cal">10</span><span><b>The brief is visible and editable.</b> The user can always see exactly what is being sent, which is also the fastest way to debug a bad generation.</span></li>
+        <li><span class="cal">11</span><span><b>Streamed, not awaited.</b> Response is read as a stream and appended; the caret marks the write head. <b>Stop</b> aborts the request and keeps what has already landed.</span></li>
+        <li><span class="cal">12</span><span><b>Tracklist rows come from Spotify</b>, never from the model, so titles and durations can't be hallucinated.</span></li>
+        <li><span class="cal">·</span><span>Changing any control after a generation marks the preview stale and turns the primary button into <b>Regenerate</b>.</span></li>
+        <li><span class="cal">·</span><span>At &lt; 1100px the split collapses to stacked, brief first, with the preview behind a tab.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sechd"><span class="num">05</span><h2>Deliver</h2>
+    <p>Spotify is not an email client. The plugin hands off; Migma owns sending, lists and consent.</p></div>
+  <div class="row">
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>07 · Deliver</b> — 452 × 686 · handoff</div>
+      <div class="panel">
+        <div class="phead"><i class="mark"></i><div class="ttl">Campaign ready<s>Saved as draft</s></div>
+          <span class="sp-r"><span class="chip sp">Draft</span></span></div>
+        <div class="pbody">
+          <div class="state" style="height:auto;padding:22px 0 6px">
+            <i class="glyph mg">✓</i>
+            <b style="font-size:16px">Draft saved to Migma</b>
+            <p>Review, add your list and send from Migma. Nothing has been sent yet.</p>
+          </div>
+          <div>
+            <div class="kv"><span>Project</span><span>Sorrel Kane — Artist</span></div>
+            <div class="kv"><span>Subject</span><span>It's 2am somewhere 🌙</span></div>
+            <div class="kv"><span>Segment</span><span>Night listeners · 3,180</span></div>
+            <div class="kv"><span>Source</span><span>Late Night Static</span></div>
+            <div class="kv" style="border:0"><span>Tracklist</span><span>4 of 128 shown</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <button class="btn mg block">Open in Migma ↗</button>
+            <button class="btn ghost block">Copy HTML</button>
+            <button class="btn ghost block">Download .html</button>
+          </div>
+          <div style="margin-top:auto"><p class="hint" style="margin:0">Sending, list management and unsubscribe handling stay in Migma. The plugin never holds recipient data.<span class="cal" style="margin-left:5px">13</span></p></div>
+        </div>
+        <div class="pfoot"><span class="chip">Done</span><span class="sp-r"><button class="btn ghost sm">Create another</button></span></div>
+      </div>
+    </div></div>
+    <div class="notes">
+      <h4>Notes</h4>
+      <ol>
+        <li><span class="cal">13</span><span><b>Hard boundary.</b> No recipient addresses, no send action, no list storage inside the Spotify client. That keeps the plugin out of scope for consent and deliverability, which is the right place for it to be.</span></li>
+        <li><span class="cal">·</span><span><b>Copy HTML</b> yields inline-styled, table-based markup that survives Outlook; the on-screen preview is the same HTML in an iframe.</span></li>
+        <li><span class="cal">·</span><span><b>Create another</b> returns to step 3 with the digest cached, so a second angle costs one request instead of four.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+<section class="sec">
+  <div class="sechd"><span class="num">06</span><h2>States</h2>
+    <p>Every network step has all five. Skeletons for first load, inline text for validation, toasts only for background work.</p></div>
+  <div class="row">
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>08a</b> — Loading</div>
+      <div class="panel mini"><div class="pbody" style="gap:13px">
+        <div class="sk" style="height:15px;width:58%"></div>
+        <div class="tiles">
+          <div class="tile"><div class="sk" style="height:17px"></div></div><div class="tile"><div class="sk" style="height:17px"></div></div>
+          <div class="tile"><div class="sk" style="height:17px"></div></div><div class="tile"><div class="sk" style="height:17px"></div></div>
+        </div>
+        <div class="sk" style="width:40%"></div><div class="sk"></div><div class="sk" style="width:86%"></div>
+        <div class="sk" style="width:72%"></div><div class="sk" style="width:54%"></div>
+        <div style="margin-top:auto;display:flex;gap:9px;align-items:center"><i class="spin"></i>
+          <span style="font-size:11.5px;color:var(--tx3)">Reading 128 tracks…</span></div>
+      </div></div>
+    </div></div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>08b</b> — Empty</div>
+      <div class="panel mini"><div class="state">
+        <i class="glyph">♪</i><b>No playlists yet</b>
+        <p>Create or follow a playlist, then come back to build a campaign from it.</p>
+        <button class="btn ghost sm">Open Your Library</button>
+      </div></div>
+    </div></div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>08c</b> — Error</div>
+      <div class="panel mini"><div class="state">
+        <i class="glyph err">!</i><b>Migma didn't respond</b>
+        <p>The idea request failed after two retries. Your digest is cached, so retrying is cheap.</p>
+        <button class="btn ghost sm">Retry</button>
+        <span style="font-size:10.5px;color:var(--tx3)">502 · req_8f31c0</span>
+      </div></div>
+    </div></div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>08d</b> — Rate limited</div>
+      <div class="panel mini"><div class="state">
+        <i class="glyph warn">⏱</i><b>Slow down a moment</b>
+        <p>Migma is rate limiting this workspace. Retrying automatically.</p>
+        <span class="chip">Retrying in 24s</span>
+        <button class="btn ghost sm">Cancel</button>
+      </div></div>
+    </div></div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>08e</b> — Key rejected</div>
+      <div class="panel mini"><div class="state">
+        <i class="glyph err">⚿</i><b>Key no longer valid</b>
+        <p>The stored key was rejected. Paste a new one — nothing else is lost.</p>
+        <button class="btn mg sm">Update key</button>
+        <span style="font-size:10.5px;color:var(--tx3)">401 · unauthorized</span>
+      </div></div>
+    </div></div>
+  </div>
+</section>
+<section class="sec">
+  <div class="sechd"><span class="num">07</span><h2>Tokens &amp; spec</h2>
+    <p>Every value below is lifted from migma.ai's own stylesheet, not approximated. Spotify green survives only inside the mocked client chrome; every Migma-owned state uses Migma's own success, warn and error tokens.</p></div>
+  <div class="specgrid">
+    <div class="card"><h4>Colour</h4>
+      <div class="sw"><i style="background:#0a0a0a"></i><b>Surface</b><u>#0A0A0A</u></div>
+      <div class="sw"><i style="background:#0f0f0f"></i><b>Page</b><u>#0F0F0F</u></div>
+      <div class="sw"><i style="background:#161616"></i><b>Raised</b><u>#161616</u></div>
+      <div class="sw"><i style="background:#2a2a2a"></i><b>Line</b><u>#2A2A2A</u></div>
+      <div class="sw"><i style="background:#353535"></i><b>Hover</b><u>#353535</u></div>
+      <div class="sw"><i style="background:#939393"></i><b>Text tertiary</b><u>#939393</u></div>
+      <div class="sw"><i style="background:#e2e2e3"></i><b>Text secondary</b><u>#E2E2E3</u></div>
+      <div class="sw"><i style="background:linear-gradient(180deg,#fff,#f0f0f0)"></i><b>Primary action</b><u>#FFF→#F0F0F0</u></div>
+      <div class="sw"><i style="background:#1ed760"></i><b>Spotify green</b><u>#1ED760</u></div>
+      <div class="sw"><i style="background:#22c55e"></i><b>Success</b><u>#22C55E</u></div>
+      <div class="sw"><i style="background:linear-gradient(120deg,#a649f8,#e3185f 28%,#f74a06 55%,#f38c05 76%,#ffc400)"></i><b>Generative</b><u>8-stop spectrum</u></div>
+      <div class="sw"><i style="background:#f38c05"></i><b>Warn</b><u>#F38C05</u></div>
+      <div class="sw"><i style="background:#ef4444"></i><b>Error</b><u>#EF4444</u></div>
+      <p class="hint">Migma is monochrome — a white raised button, not a coloured one. The spectrum is reserved for generative surfaces: the AI canvas border, the stream chip, the bar fills. Six places, one token.</p>
+    </div>
+    <div class="card tscale"><h4>Type — Migma display + system sans</h4>
+      <div><span style="font-family:var(--fd);font-size:21px;font-weight:700;letter-spacing:.5px">Display</span><u>21 / 700 / +.5px</u></div>
+      <div><span style="font-family:var(--fd);font-size:15px;font-weight:700;letter-spacing:.5px">Section</span><u>15 / 700 / +.5px</u></div>
+      <div><span style="font-family:var(--fd);font-size:13.5px;font-weight:700;letter-spacing:.5px">Card title</span><u>13.5 / 700</u></div>
+      <div><span style="font-size:13px">Body</span><u>13 / 400 / 1.45</u></div>
+      <div><span style="font-size:12.5px;color:var(--tx2)">Secondary</span><u>12.5 / 400</u></div>
+      <div><span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);font-weight:600">Label</span><u>11 / 600 / +6%</u></div>
+      <div style="border:0"><span style="font-size:11px;color:var(--tx3)">Hint</span><u>11 / 400</u></div>
+      <p class="hint">Headings use Migma's own display face at <b>+0.5px</b> tracking — the two <code>.woff2</code> files ship inside the app folder and fall back to <code>migma.ai/fonts</code>, then to the system stack. Spacing 4 · 6 · 9 · 11 · 14 · 18 · 22. Radii 4 · 6 · 8 · 12 · 16 — no pills anywhere.</p>
+    </div>
+    <div class="card"><h4>Motion</h4>
+      <table>
+        <tr><th>Element</th><th>Change</th><th>Timing</th></tr>
+        <tr><td><b>Panel enter</b></td><td>fade + 8px rise</td><td>300ms <code>(.33,1,.68,1)</code></td></tr>
+        <tr><td><b>Step change</b></td><td>x-slide 12px, no fade</td><td>200ms <code>(0,0,.2,1)</code></td></tr>
+        <tr><td><b>Button press</b></td><td>2px drop, bottom 3→1px</td><td>60ms</td></tr>
+        <tr><td><b>Idea select</b></td><td>border + inset ring</td><td>150ms</td></tr>
+        <tr><td><b>Stream text</b></td><td>append, caret blink</td><td>1s steps(2)</td></tr>
+        <tr><td><b>Spectrum sweep</b></td><td>pan 300% background</td><td>7s linear</td></tr>
+        <tr><td><b>Skeleton</b></td><td>sheen sweep</td><td>1.4s linear</td></tr>
+        <tr><td><b>Toast</b></td><td>rise 10px, auto-dismiss</td><td>200ms / 4s</td></tr>
+      </table>
+      <p class="hint">Durations and curves are Migma's <code>--duration-fast/normal/slow</code> and <code>--ease-out-cubic</code>. All of it behind <code>prefers-reduced-motion</code>; the caret becomes static, the spectrum stops panning, skeletons stop sweeping.</p>
+    </div>
+    <div class="card"><h4>Component inventory</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn sm">Primary</button><button class="btn mg sm">Generative</button><button class="btn ghost sm">Ghost</button>
+        <button class="btn ghost sm" disabled>Disabled</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+        <span class="chip">Chip</span><span class="chip on">Chip · on</span><span class="chip sp">Status</span>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+        <span class="tog on"><b></b></span><span class="tog"><b></b></span><span class="swatch"></span>
+        <span class="stepdots"><i class="done"></i><i class="on"></i><i></i><i></i></span><i class="spin"></i>
+      </div>
+      <div class="seg" style="margin-top:12px"><i class="on">One</i><i>Two</i><i>Three</i></div>
+      <div class="inp ph" style="margin-top:10px">Text input</div>
+      <p class="hint">12 atoms total. Native <code>Spicetify.ReactComponent</code> primitives are used for menus, tooltips and the confirm dialog so they inherit client behaviour for free.</p>
+    </div>
+  </div>
+</section>
+<section class="sec">
+  <div class="sechd"><span class="num">08</span><h2>Build &amp; data contract</h2>
+    <p>What ships, what it talks to, and the three open questions that need your confirmation.</p></div>
+  <div class="specgrid">
+    <div class="card"><h4>Surface</h4>
+      <table>
+        <tr><th>Piece</th><th>Where</th></tr>
+        <tr><td><b>Custom app</b></td><td><code>CustomApps/migma/</code> — sidebar route, all seven frames</td></tr>
+        <tr><td><b>Extension</b></td><td><code>extension.js</code> — topbar button, playlist context menu, deep links</td></tr>
+        <tr><td><b>Runtime</b></td><td>Vanilla ES2020 + <code>Spicetify.React</code>, no build step</td></tr>
+        <tr><td><b>Install</b></td><td><code>spicetify config custom_apps migma &amp;&amp; spicetify apply</code></td></tr>
+      </table>
+    </div>
+    <div class="card"><h4>Spotify reads</h4>
+      <table>
+        <tr><th>Call</th><th>For</th></tr>
+        <tr><td><code>/v1/playlists/{id}</code></td><td>name, art, followers, owner</td></tr>
+        <tr><td><code>/v1/playlists/{id}/tracks</code></td><td>tracks, paginated 100 at a time</td></tr>
+        <tr><td><code>/v1/artists?ids=</code></td><td>genres + popularity, batched 50</td></tr>
+        <tr><td><code>/v1/me/playlists</code></td><td>source picker</td></tr>
+      </table>
+      <p class="hint">Read-only, through the client's own session via <code>CosmosAsync</code> — no separate OAuth prompt, no scopes to request.</p>
+    </div>
+    <div class="card"><h4>Migma writes</h4>
+      <table>
+        <tr><th>Call</th><th>For</th></tr>
+        <tr><td><code>GET /v1/projects</code></td><td>project picker</td></tr>
+        <tr><td><code>POST /v1/campaigns/ideas</code></td><td>digest → three angles</td></tr>
+        <tr><td><code>POST /v1/campaigns/generate</code></td><td>brief → streamed email</td></tr>
+        <tr><td><code>POST /v1/campaigns</code></td><td>save draft to project</td></tr>
+      </table>
+      <p class="hint">Every path and field name lives in one <code>ENDPOINTS</code> map, so aligning to the real schema is a few lines rather than a refactor.</p>
+    </div>
+    <div class="card" style="border-color:rgba(243,140,5,.35);background:rgba(243,140,5,.04)">
+      <h4 style="color:var(--warn)">Open questions</h4>
+      <ol style="list-style:none;display:flex;flex-direction:column;gap:11px">
+        <li style="font-size:12.5px;color:var(--tx2);line-height:1.55"><b style="color:var(--tx)">1 · Migma API shape.</b> The four calls above are the plausible shape, not a documented one. Send me the real reference and I will align the client.</li>
+        <li style="font-size:12.5px;color:var(--tx2);line-height:1.55"><b style="color:var(--tx)">2 · Brand tokens.</b> Palette, display face and the raised-button geometry are read out of migma.ai's own stylesheet and brand kit — nothing here is invented. If the internal design system has moved past the public build, one token block updates every screen.</li>
+        <li style="font-size:12.5px;color:var(--tx2);line-height:1.55"><b style="color:var(--tx)">3 · Segments.</b> Shown as coming from Migma. If segments live elsewhere, that select becomes free text.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+<script>
+const root = document.documentElement;
+const set = m => {
+  root.dataset.fid = m;
+  document.getElementById('t-wire').classList.toggle('on', m === 'wire');
+  document.getElementById('t-hifi').classList.toggle('on', m === 'hifi');
+};
+document.getElementById('t-wire').onclick = () => set('wire');
+document.getElementById('t-hifi').onclick = () => set('hifi');
+addEventListener('keydown', e => { if (e.key === 'w') set(root.dataset.fid === 'wire' ? 'hifi' : 'wire'); });
+</script>
+</body>
+</html>
+
