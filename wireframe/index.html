@@ -230,8 +230,10 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 
 /* The flow, one card per step. Inline SVG rather than a linked file, so the standalone
    build keeps zero external subresources; the viewBox is cropped to the panel, inset 2px so
-   the container's own stroke is not clipped. Geometry is baked, so it only ever scales. */
-.hiw{display:block;width:100%;height:auto}
+   the container's own stroke is not clipped. Geometry is baked, so it only ever scales, and
+   the cap is the client shell's own width — the widest frame on the board — so the diagram
+   sits in the same column as every other section and its baked type lands at board scale. */
+.hiw{display:block;width:100%;max-width:1180px;height:auto}
 
 /* ---------- fidelity toggle ---------- */
 .bar-top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:11px 16px;margin:-44px -28px 30px;
@@ -274,7 +276,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 </section>
 
 <section class="sec">
-  <div class="sechd"><span class="num">00</span><h2>Flow</h2>
+  <div class="sechd"><h2>Flow</h2>
     <p>Three steps. The rail under the header is the only way back.</p></div>
   <svg class="hiw" viewBox="118 292 1684 648" role="img" aria-labelledby="hiwT hiwD">
     <title id="hiwT">How it works — the three steps drawn out</title>
@@ -453,14 +455,16 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
         <div class="pbody">
           <div>
             <div class="h-lg">Connect Migma</div>
-            <p class="sub" style="margin-top:7px">Paste a workspace API key to let Migma read this playlist and draft campaigns against your projects.</p>
+            <p class="sub" style="margin-top:7px">Point the plugin at your Migma proxy. It holds the workspace key and signs every request, so this client never handles one.</p>
           </div>
           <div>
             <div class="field">
-              <label class="lbl">API key</label>
-              <div class="inp">••••••••••••••••••••••3f9a</div>
-              <div class="hint">Migma → Settings → Developer → API keys. <a href="#">Open docs ↗</a></div>
+              <label class="lbl">Proxy URL</label>
+              <div class="inp">https://migma-proxy.sorrelkane.dev</div>
+              <div class="hint">Your own service. It exchanges this client's Spotify session for a scoped one and signs to Migma. <a href="#">Open docs ↗</a></div>
             </div>
+            <button class="btn ghost block">Check connection</button>
+            <p class="hint" style="margin:6px 0 10px;color:var(--ok)">2 projects found</p>
             <div class="field">
               <label class="lbl">Workspace project</label>
               <div class="inp" style="display:flex;align-items:center"><span>Sorrel Kane — Artist</span><span style="margin-left:auto;color:var(--tx3)">▾</span></div>
@@ -470,7 +474,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           </div>
           <div style="margin-top:auto">
             <div class="divider"></div>
-            <p class="hint" style="margin:0">The key is stored in the Spotify client's local storage on this machine and is sent only to <code>api.migma.ai</code>. Clearing it in Settings revokes local access immediately.</p>
+            <p class="hint" style="margin:0">No Migma key is stored here. The plugin presents the Spotify session this client already holds and the proxy returns a short-lived, scoped one, kept in memory only. Only the proxy talks to <code>api.migma.ai</code>.</p>
           </div>
         </div>
         <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i></span>
@@ -562,25 +566,29 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
         <div class="phead"><i class="mark"></i><div class="ttl">Campaign ideas<s>From 128 tracks · 47 artists</s></div>
           <span class="sp-r"><span class="chip">↻ Regenerate</span></span></div>
         <div class="pbody" style="gap:11px">
-          <div class="idea sel">
-            <div class="top"><b>The 2am Playlist Drop</b><span class="conf">STRONG MATCH</span></div>
-            <div class="subj">It's 2am somewhere 🌙<s>Preheader — 128 tracks for the hours that don't count.</s></div>
-            <p>Leans on the late-night listening skew. Opens with the hour, not the music, then hands over the playlist as a place to be.</p>
-            <div class="foot"><span class="chip on">night listeners</span><span class="chip">CTA · Listen now</span></div>
+          <!-- The stack is the flexible region and clips, so the list reads as continuing past
+               the fold. The escape hatch sits outside it and stays reachable at any length. -->
+          <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:11px">
+            <div class="idea sel">
+              <div class="top"><b>The 2am Playlist Drop</b><span class="conf">STRONG MATCH</span></div>
+              <div class="subj">It's 2am somewhere 🌙<s>Preheader — 128 tracks for the hours that don't count.</s></div>
+              <p>Leans on the late-night listening skew. Opens with the hour, not the music, then hands over the playlist as a place to be.</p>
+              <div class="foot"><span class="chip on">night listeners</span><span class="chip">CTA · Listen now</span></div>
+            </div>
+            <div class="idea">
+              <div class="top"><b>47 Artists, One Mood</b><span class="conf">GOOD MATCH</span></div>
+              <div class="subj">We found your next favourite band<s>Preheader — Five names you haven't heard, picked from one playlist.</s></div>
+              <p>Discovery framing for the low-mainstream tag. Foregrounds five least-popular artists as the reward.</p>
+              <div class="foot"><span class="chip">discovery-forward</span><span class="chip">CTA · Meet the artists</span></div>
+            </div>
+            <div class="idea">
+              <div class="top"><b>Shoegaze Revival Digest</b><span class="conf">FAIR MATCH</span></div>
+              <div class="subj">Loud, blurry, beautiful<s>Preheader — The 14% of this playlist that owes everything to 1991.</s></div>
+              <p>Genre-loyalist angle. Narrower reach, highest expected click-through on the segment it does hit.</p>
+              <div class="foot"><span class="chip">genre loyalists</span><span class="chip">CTA · Read the digest</span></div>
+            </div>
           </div>
-          <div class="idea">
-            <div class="top"><b>47 Artists, One Mood</b><span class="conf">GOOD MATCH</span></div>
-            <div class="subj">We found your next favourite band<s>Preheader — Five names you haven't heard, picked from one playlist.</s></div>
-            <p>Discovery framing for the low-mainstream tag. Foregrounds five least-popular artists as the reward.</p>
-            <div class="foot"><span class="chip">discovery-forward</span><span class="chip">CTA · Meet the artists</span></div>
-          </div>
-          <div class="idea">
-            <div class="top"><b>Shoegaze Revival Digest</b><span class="conf">FAIR MATCH</span></div>
-            <div class="subj">Loud, blurry, beautiful<s>Preheader — The 14% of this playlist that owes everything to 1991.</s></div>
-            <p>Genre-loyalist angle. Narrower reach, highest expected click-through on the segment it does hit.</p>
-            <div class="foot"><span class="chip">genre loyalists</span><span class="chip">CTA · Read the digest</span></div>
-          </div>
-          <div style="margin-top:auto"><a href="#" style="font-size:12px">Skip ideas — write my own brief →</a></div>
+          <div><a href="#" style="font-size:12px">Skip ideas — write my own brief →</a></div>
         </div>
         <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="on"></i><i></i></span>
           <span class="sp-r"><button class="btn mg sm">Open canvas</button></span></div>
@@ -651,8 +659,8 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
       <div class="panel">
         <div class="phead"><i class="mark"></i><div class="ttl">Campaign ready<s>Saved as draft</s></div>
           <span class="sp-r"><span class="chip sp">Draft</span></span></div>
-        <div class="pbody">
-          <div class="state" style="height:auto;padding:22px 0 6px">
+        <div class="pbody" style="gap:11px">
+          <div class="state" style="height:auto;padding:8px 0 2px">
             <i class="glyph mg">✓</i>
             <b style="font-size:16px">Draft saved to Migma</b>
             <p>Review, add your list and send from Migma. Nothing has been sent yet.</p>
@@ -716,11 +724,11 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
         <button class="btn ghost sm">Cancel</button>
       </div></div>
     </div></div>
-    <div class="fwrap"><div class="frame"><div class="flabel"><b>08e</b> — Key rejected</div>
+    <div class="fwrap"><div class="frame"><div class="flabel"><b>08e</b> — Session refused</div>
       <div class="panel mini"><div class="state">
-        <i class="glyph err">⚿</i><b>Key no longer valid</b>
-        <p>The stored key was rejected. Paste a new one — nothing else is lost.</p>
-        <button class="btn mg sm">Update key</button>
+        <i class="glyph err">⚿</i><b>Session refused</b>
+        <p>The proxy would not authorise this session. Check the connection — nothing else is lost.</p>
+        <button class="btn mg sm">Check connection</button>
         <span style="font-size:10.5px;color:var(--tx3)">401 · unauthorized</span>
       </div></div>
     </div></div>
