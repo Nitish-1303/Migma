@@ -255,13 +255,13 @@ td{padding:8px 8px 8px 0;border-top:1px solid var(--lineS);color:var(--tx2);vert
 td b{color:var(--tx);font-weight:600}
 code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospace;font-size:11.5px;color:#e2e2e3;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px}
 
-.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:22px;border:1px solid var(--line);border-radius:var(--r3);background:var(--s1)}
-.node{border:1px solid var(--line);border-radius:var(--r2);padding:10px 13px;font-size:12px;background:var(--canvas);white-space:nowrap}
-.node b{display:block;font-size:12.5px}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:22px;border:1px solid var(--line);border-radius:var(--r3);background:var(--s1)}
+.node{border:1px solid var(--line);border-radius:var(--r2);padding:10px 13px;font-size:12px;background:var(--canvas);min-width:104px}
+.node b{display:block;font-size:12.5px;white-space:nowrap}
 .node s{text-decoration:none;font-size:10.5px;color:var(--tx3)}
 .node.key{border-color:#fff;background:rgba(255,255,255,.06)}
 .node.term{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
-.arw{color:var(--tx3);font-size:15px}
+.arw{color:var(--tx3);font-size:15px;flex:none}
 
 /* ---------- fidelity toggle ---------- */
 .bar-top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:11px 16px;margin:-44px -28px 30px;
@@ -311,7 +311,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
     in as work finishes, not a screen that hands off to the next — which is why the seven mockups below sit
     inside three steps rather than seven. The rail under the header is the only way back.</p></div>
   <div class="flow">
-    <div class="node"><b>Entry</b><s>left nav · topbar · right-click a playlist</s></div><span class="arw">→</span>
+    <div class="node"><b>Entry</b><s>nav · topbar · right-click</s></div><span class="arw">→</span>
     <div class="node key"><b>1 · Pick a playlist</b><s>connect, choose, read the audience</s></div><span class="arw">→</span>
     <div class="node key"><b>2 · Choose &amp; refine</b><s>angle, brief, live preview</s></div><span class="arw">→</span>
     <div class="node term"><b>3 · Save &amp; export</b><s>score, save, receipt</s></div>
