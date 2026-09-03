@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Migma x Spotify - three-step campaign flow. 1920x1080 (16:9).
+     Geometry is baked from measured font metrics, so the boxes fit their text on any platform.
+     Colours are the wireframe's own tokens: page #0A0A0A, raised #141414, canvas #0F0F0F,
+     line #2A2A2A, text #FFFFFF, text-tertiary #939393, success #22C55E. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">Migma × Spotify — three-step campaign flow</title>
+  <desc id="desc">A left-to-right pipeline: Entry, then step 1 Pick a playlist, step 2 Choose and refine, step 3 Save and export.</desc>
+
+  <!-- page -->
+  <rect width="1920" height="1080" fill="#0a0a0a"/>
+
+  <!-- container -->
+  <rect x="168" y="368" width="1584" height="344" rx="22" fill="#141414" stroke="#2a2a2a" stroke-width="2"/>
+
+  <!-- Entry - dark surface, subtle line -->
+  <rect x="216" y="478" width="284" height="124" rx="14" fill="#0f0f0f" stroke="#2a2a2a" stroke-width="2"/>
+  <text x="244" y="534.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="28" font-weight="700" fill="#ffffff">Entry</text>
+  <text x="244" y="570.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="21" font-weight="400" fill="#939393">nav · topbar · right-click</text>
+
+  <text x="533" y="549" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="30" font-weight="400" fill="#939393">→</text>
+
+  <!-- Step 1 - active, white outline -->
+  <rect x="566" y="478" width="396" height="124" rx="14" fill="#222222" stroke="#ffffff" stroke-width="2"/>
+  <text x="594" y="534.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="28" font-weight="700" fill="#ffffff">1 · Pick a playlist</text>
+  <text x="594" y="570.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="21" font-weight="400" fill="#939393">connect, choose, read the audience</text>
+
+  <text x="995" y="549" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="30" font-weight="400" fill="#939393">→</text>
+
+  <!-- Step 2 - active, white outline -->
+  <rect x="1028" y="478" width="318" height="124" rx="14" fill="#222222" stroke="#ffffff" stroke-width="2"/>
+  <text x="1056" y="534.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="28" font-weight="700" fill="#ffffff">2 · Choose &amp; refine</text>
+  <text x="1056" y="570.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="21" font-weight="400" fill="#939393">angle, brief, live preview</text>
+
+  <text x="1379" y="549" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="30" font-weight="400" fill="#939393">→</text>
+
+  <!-- Step 3 - terminal, emerald outline -->
+  <rect x="1412" y="478" width="292" height="124" rx="14" fill="#152019" stroke="#22c55e" stroke-width="2"/>
+  <text x="1440" y="534.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="28" font-weight="700" fill="#ffffff">3 · Save &amp; export</text>
+  <text x="1440" y="570.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif" font-size="21" font-weight="400" fill="#939393">score, save, receipt</text>
+</svg>
