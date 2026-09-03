@@ -1,9 +1,10 @@
-# Credentials. Nothing in this tree holds one, and nothing is meant to — the plugin never receives
-# a Migma key, since a proxy holds it and signs on the client's behalf, and the scoped session the
-# client does hold lives in memory only. The rule still earns its place: it only helps if it is in
-# place before the mistake, not after it.
+# Credentials. The plugin never receives a Migma key — the proxy holds it and signs on the
+# client's behalf, and the scoped session the client does hold lives in memory only. The proxy
+# does read a real key, from `proxy/.env`, which is exactly what the first two rules keep out of
+# this history. The rule only helps if it is in place before the mistake, not after it.
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.p12
@@ -24,6 +25,11 @@ desktop.ini
 # run, and deleted in the same pass; an interrupted pass must not leave one in a commit.
 _*.cjs
 
-# Deliberately absent: no `node_modules/`, no `dist/`, no `build/`, no coverage or cache
-# directories. There is no dependency manager and no build step — Spicetify loads these source
-# files as they are — so a rule for any of them would be noise that hides the lines above.
+# Install output. The proxy declares zero runtime dependencies, so this directory should stay
+# empty in practice — but `npm install` still writes into it, and an empty-looking tree is not a
+# reason to leave the rule out.
+node_modules/
+
+# Deliberately absent: no `dist/`, no `build/`, no coverage or cache directories. Spicetify loads
+# the plugin's source files as they are and the proxy runs from its own source, so there is no
+# build step anywhere in this tree; a rule for one would be noise that hides the lines above.

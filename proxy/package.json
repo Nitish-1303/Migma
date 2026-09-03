@@ -1,0 +1,20 @@
+{
+  "name": "migma-spotify-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend-for-frontend proxy between the Migma Spicetify client and the Migma v1 API. Holds the workspace secret, validates Spotify sessions, and bridges the client to the published endpoint contract.",
+  "license": "MIT",
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "check": "node --check server.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

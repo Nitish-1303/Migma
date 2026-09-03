@@ -1,0 +1,11 @@
+# The build context should not contain a secret in the first place. This is the
+# second line of defence, so a local .env can never become a layer.
+.env
+.env.*
+!.env.example
+
+node_modules
+test
+Dockerfile
+.dockerignore
+README.md
