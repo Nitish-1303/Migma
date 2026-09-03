@@ -307,16 +307,55 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 
 <section class="sec">
   <div class="sechd"><span class="num">00</span><h2>Flow</h2>
-    <p>Three steps, one reversible path. Each is a single surface that changes what it shows as the work
-    progresses rather than a screen that hands off to the next, so connecting, picking a playlist and reading
-    its audience all happen without leaving step&nbsp;one. Progress is a rail under the header, and a step
-    already behind you is a button back to it. The context&nbsp;menu still opens straight on a playlist's
-    audience.</p></div>
+    <p>Three steps, and their three names are the whole navigation model. A step is one surface that fills
+    in as work finishes, not a screen that hands off to the next — which is why the seven mockups below sit
+    inside three steps rather than seven. The rail under the header is the only way back.</p></div>
   <div class="flow">
-    <div class="node"><b>Entry</b><s>nav · topbar · context menu</s></div><span class="arw">→</span>
-    <div class="node key"><b>1 · Pick a playlist</b><s>connect · source · digest</s></div><span class="arw">→</span>
-    <div class="node key"><b>2 · Choose &amp; refine</b><s>angles · brief · live preview</s></div><span class="arw">→</span>
-    <div class="node term"><b>3 · Save &amp; export</b><s>pre-flight · save · receipt</s></div>
+    <div class="node"><b>Entry</b><s>left nav · topbar · right-click a playlist</s></div><span class="arw">→</span>
+    <div class="node key"><b>1 · Pick a playlist</b><s>connect, choose, read the audience</s></div><span class="arw">→</span>
+    <div class="node key"><b>2 · Choose &amp; refine</b><s>angle, brief, live preview</s></div><span class="arw">→</span>
+    <div class="node term"><b>3 · Save &amp; export</b><s>score, save, receipt</s></div>
+  </div>
+  <div class="row">
+    <div class="notes">
+      <h4>Step 1 · Pick a playlist</h4>
+      <ol>
+        <li><span class="cal">·</span><span><b>Mockups 02–04.</b> One step, three things it can be showing — connect, choose, digest. Nothing hands off between them.</span></li>
+        <li><span class="cal">·</span><span><b>You see</b> the connect form on a first run only. After that: whichever playlist is open in Spotify right now, plus a searchable list of your own.</span></li>
+        <li><span class="cal">·</span><span><b>You do one thing</b> — pick a playlist. That click is the whole action; there is no separate Analyse button to press afterwards.</span></li>
+        <li><span class="cal">·</span><span><b>Migma reads it</b> through Spotify's own session, read-only, and the digest fills in under the name: tracks, runtime, artists, popularity, top genres, release era, audience tags.</span></li>
+        <li><span class="cal">·</span><span><b>Change</b>, beside the playlist name, swaps it. Anything read in the last 30&nbsp;minutes comes back from cache, so a second look asks Spotify for nothing.</span></li>
+      </ol>
+    </div>
+    <div class="notes">
+      <h4>Step 2 · Choose &amp; refine</h4>
+      <ol>
+        <li><span class="cal">·</span><span><b>Mockups 05–06.</b> Three tabs — Angles, Brief, Review — and the email preview stays beside them the whole time.</span></li>
+        <li><span class="cal">·</span><span><b>You see</b> three angles written from the digest. They are radio buttons, not checkboxes: one campaign per pass.</span></li>
+        <li><span class="cal">·</span><span><b>You do the editing</b> — tone, segment, subject, call to action. Review holds the comment thread for whoever else is on the campaign.</span></li>
+        <li><span class="cal">·</span><span><b>Migma streams</b> the email as it writes it, so the preview fills line by line instead of appearing at the end. Stop keeps what has arrived; Regenerate starts the pass over.</span></li>
+        <li><span class="cal">·</span><span><b>Back is the rail.</b> Step&nbsp;one is one click away, and the digest and the brief are both still there when you return.</span></li>
+      </ol>
+    </div>
+    <div class="notes">
+      <h4>Step 3 · Save &amp; export</h4>
+      <ol>
+        <li><span class="cal">·</span><span><b>Mockup 07.</b> The step opens on a pre-flight read rather than on a bare Save button.</span></li>
+        <li><span class="cal">·</span><span><b>You see the score first</b> — conversion probability, the peak listening window, and which signals moved the number.</span></li>
+        <li><span class="cal">·</span><span><b>You make two decisions</b> — name a reviewer, then save the draft into the Migma project.</span></li>
+        <li><span class="cal">·</span><span><b>Then it becomes a receipt.</b> Copy HTML and Download .html are local: they never touch the workspace, and nothing is sent from here.</span></li>
+        <li><span class="cal">·</span><span><b>Forward, not back.</b> Create another returns to step&nbsp;one with the playlist still selected and its digest still cached.</span></li>
+      </ol>
+    </div>
+    <div class="notes">
+      <h4>The rail</h4>
+      <ol>
+        <li><span class="cal">·</span><span><b>It is there from the first run,</b> before a key is entered — three words are the clearest thing a cold start can say about what this does.</span></li>
+        <li><span class="cal">·</span><span><b>It only goes backwards.</b> A finished step is a button with a tick. The step you are on, and the ones ahead of it, are plain text rather than greyed-out buttons.</span></li>
+        <li><span class="cal">·</span><span><b>Leaving a step cancels it.</b> Whatever it had asked for is dropped, and a late reply cannot overwrite the newer step's own.</span></li>
+        <li><span class="cal">·</span><span><b>Two things close it:</b> a write in flight, and a saved draft. A receipt describes copy that has already left.</span></li>
+      </ol>
+    </div>
   </div>
 </section>
 
