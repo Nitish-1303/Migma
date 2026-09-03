@@ -301,21 +301,22 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
   <div class="meta">
     <span>Surface — Spicetify custom app + topbar button + playlist context menu</span>
     <span>Theme — Spotify dark shell, Migma tokens verbatim</span>
-    <span>Six-step wizard · five recovery states</span>
+    <span>Three-step rail · five recovery states</span>
   </div>
 </section>
 
 <section class="sec">
   <div class="sechd"><span class="num">00</span><h2>Flow</h2>
-    <p>Six views, one reversible path, four of them counted in the stepper. Every step is deep-linkable so the context&nbsp;menu can jump straight to the digest.</p></div>
+    <p>Three steps, one reversible path. Each is a single surface that changes what it shows as the work
+    progresses rather than a screen that hands off to the next, so connecting, picking a playlist and reading
+    its audience all happen without leaving step&nbsp;one. Progress is a rail under the header, and a step
+    already behind you is a button back to it. The context&nbsp;menu still opens straight on a playlist's
+    audience.</p></div>
   <div class="flow">
     <div class="node"><b>Entry</b><s>nav · topbar · context menu</s></div><span class="arw">→</span>
-    <div class="node key"><b>1 · Connect</b><s>key + project</s></div><span class="arw">→</span>
-    <div class="node key"><b>2 · Source</b><s>pick playlist</s></div><span class="arw">→</span>
-    <div class="node key"><b>3 · Digest</b><s>derived metrics</s></div><span class="arw">→</span>
-    <div class="node key"><b>4 · Ideas</b><s>AI angles</s></div><span class="arw">→</span>
-    <div class="node key"><b>5 · Canvas</b><s>brief + stream</s></div><span class="arw">→</span>
-    <div class="node term"><b>6 · Deliver</b><s>save · copy · export</s></div>
+    <div class="node key"><b>1 · Pick a playlist</b><s>connect · source · digest</s></div><span class="arw">→</span>
+    <div class="node key"><b>2 · Choose &amp; refine</b><s>angles · brief · live preview</s></div><span class="arw">→</span>
+    <div class="node term"><b>3 · Save &amp; export</b><s>pre-flight · save · receipt</s></div>
   </div>
 </section>
 
@@ -395,7 +396,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 </section>
 
 <section class="sec">
-  <div class="sechd"><span class="num">02</span><h2>Connect &amp; source</h2>
+  <div class="sechd"><span class="num">02</span><h2>Step 1 · Connect &amp; source</h2>
     <p>One-time auth, then a source picker that defaults to whatever the user is already looking at.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>02 · Connect</b> — 452 × 686 · first run</div>
@@ -425,8 +426,8 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <p class="hint" style="margin:0">The key is stored in the Spotify client's local storage on this machine and is sent only to <code>api.migma.ai</code>. Clearing it in Settings revokes local access immediately.<span class="cal" style="margin-left:6px">4</span></p>
           </div>
         </div>
-        <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i><i></i></span>
-          <span class="sp-r"><span class="chip">Step 1 of 4</span></span></div>
+        <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i></span>
+          <span class="sp-r"><span class="chip">Step 1 of 3</span></span></div>
       </div>
     </div></div>
     <div class="fwrap"><div class="frame"><div class="flabel"><b>03 · Source</b> — 452 × 686 · playlist picker</div>
@@ -458,7 +459,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           </div>
           <div style="margin-top:auto"><p class="hint" style="margin:0">Collaborative and private playlists work too. Followers are read from the playlist, not from your audience list.</p></div>
         </div>
-        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="on"></i><i></i><i></i></span>
+        <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i></span>
           <span class="sp-r"><button class="btn mg sm">Analyse playlist</button></span></div>
       </div>
     </div></div>
@@ -474,7 +475,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
   </div>
 </section>
 <section class="sec">
-  <div class="sechd"><span class="num">03</span><h2>Audience digest &amp; ideas</h2>
+  <div class="sechd"><span class="num">03</span><h2>Steps 1–2 · Digest &amp; ideas</h2>
     <p>The digest is the whole bet: it is the only thing Migma is told about the playlist, so it has to be legible.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>04 · Digest</b> — 452 × 686 · derived client-side</div>
@@ -514,7 +515,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <p class="hint">Derived from playlist metadata, artist genres and release dates. No audio-features call — that endpoint is deprecated for new clients.<span class="cal" style="margin-left:5px">8</span></p>
           </div>
         </div>
-        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="done"></i><i class="on"></i><i></i></span>
+        <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i></span>
           <span class="sp-r"><button class="btn mg sm">Generate ideas</button></span></div>
       </div>
     </div></div>
@@ -543,7 +544,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           </div>
           <div style="margin-top:auto"><a href="#" style="font-size:12px">Skip ideas — write my own brief →</a></div>
         </div>
-        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="done"></i><i class="done"></i><i class="on"></i></span>
+        <div class="pfoot"><span class="stepdots"><i class="done"></i><i class="on"></i><i></i></span>
           <span class="sp-r"><button class="btn mg sm">Open canvas</button></span></div>
       </div>
     </div></div>
@@ -559,7 +560,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
   </div>
 </section>
 <section class="sec">
-  <div class="sechd"><span class="num">04</span><h2>Campaign canvas</h2>
+  <div class="sechd"><span class="num">04</span><h2>Step 2 · Choose &amp; refine</h2>
     <p>Brief on the left, live email on the right. Output streams in token by token so a long generation never looks stalled.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>06 · Canvas</b> — 928 × 686 · streaming</div>
@@ -624,7 +625,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 </section>
 
 <section class="sec">
-  <div class="sechd"><span class="num">05</span><h2>Deliver</h2>
+  <div class="sechd"><span class="num">05</span><h2>Step 3 · Save &amp; export</h2>
     <p>Spotify is not an email client. The plugin hands off; Migma owns sending, lists and consent.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>07 · Deliver</b> — 452 × 686 · handoff</div>
@@ -659,7 +660,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
       <ol>
         <li><span class="cal">13</span><span><b>Hard boundary.</b> No recipient addresses, no send action, no list storage inside the Spotify client. That keeps the plugin out of scope for consent and deliverability, which is the right place for it to be.</span></li>
         <li><span class="cal">·</span><span><b>Copy HTML</b> yields inline-styled, table-based markup that survives Outlook; the on-screen preview is the same HTML in an iframe.</span></li>
-        <li><span class="cal">·</span><span><b>Create another</b> returns to step 3 with the digest cached, so a second angle costs one request instead of four.</span></li>
+        <li><span class="cal">·</span><span><b>Create another</b> returns to step one with the playlist still selected and its digest still cached, so a second campaign from the same playlist re-reads nothing from Spotify.</span></li>
       </ol>
     </div>
   </div>
@@ -768,7 +769,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
       </div>
       <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
         <span class="tog on"><b></b></span><span class="tog"><b></b></span><span class="swatch"></span>
-        <span class="stepdots"><i class="done"></i><i class="on"></i><i></i><i></i></span><i class="spin"></i>
+        <span class="stepdots"><i class="done"></i><i class="on"></i><i></i></span><i class="spin"></i>
       </div>
       <div class="seg" style="margin-top:12px"><i class="on">One</i><i>Two</i><i>Three</i></div>
       <div class="inp ph" style="margin-top:10px">Text input</div>
