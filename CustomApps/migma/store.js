@@ -8,8 +8,7 @@ Migma.store = (() => {
   const WS_TTL = 10 * 60 * 1000;
 
   const defaults = {
-    baseUrl: "https://api.migma.ai/v1",
-    apiKey: "",
+    proxyUrl: "",
     projectId: "",
     projectName: "",
     theme: "system",
@@ -73,7 +72,7 @@ Migma.store = (() => {
     return settings;
   }
   // Appearance is a display preference, not a credential, so it survives a disconnect.
-  // Workspace resources belong to the key that fetched them, so they do not.
+  // Workspace resources belong to the session that fetched them, so they do not.
   function forget() {
     const theme = get().theme;
     settings = Object.assign({}, defaults, { theme });
@@ -87,9 +86,11 @@ Migma.store = (() => {
     return () => listeners.delete(fn);
   }
 
+  // A proxy and a project are the whole of it: the session that authorises calls is minted on
+  // demand and held in memory, so it is never what decides whether the app has somewhere to work.
   function isConnected() {
     const s = get();
-    return Boolean(s.apiKey && s.projectId);
+    return Boolean(s.proxyUrl && s.projectId);
   }
 
   function readDigests() {

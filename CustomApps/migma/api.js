@@ -1,9 +1,12 @@
 window.Migma = window.Migma || {};
 
 Migma.api = (() => {
-  // Every Migma path and response field lives here. If the published schema differs,
-  // this map and the normalisers below are the only things that change.
+  // Every path the client asks for lives here. `session` is the proxy's own: it exchanges the
+  // Spotify session this client already holds for a short-lived, scoped one. The rest are Migma
+  // paths the proxy forwards under the workspace key, so this map and the normalisers below are
+  // the only things that move if the published schema differs.
   const ENDPOINTS = {
+    session: "/session",
     projects: "/projects",
     ideas: "/campaigns/ideas",
     generate: "/campaigns/generate",
@@ -91,38 +94,135 @@ Migma.api = (() => {
     return (res.items || []).filter(p => p && p.id);
   }
 
-  function headers(accept) {
-    const s = Migma.store.get();
-    return {
-      Authorization: `Bearer ${s.apiKey}`,
-      "Content-Type": "application/json",
-      Accept: accept,
-      "X-Migma-Client": "spicetify-migma"
-    };
+  const CLIENT = "spicetify-migma";
+
+  // The proxy holds the workspace key and signs with it, so nothing in this client ever handles one.
+  // A session is minted by presenting the token the Spotify client is already using for its own
+  // reads, is short-lived, and is therefore kept in memory rather than stored: a reload mints
+  // another. It is keyed by the proxy that issued it, so repointing the plugin cannot reuse a token
+  // the new proxy never granted.
+  const SKEW = 30 * 1000;
+  let session = null;
+
+  const endSession = () => {
+    session = null;
+  };
+
+  const proxyBase = () => {
+    const url = String(Migma.store.get().proxyUrl || "").trim().replace(/\/+$/, "");
+    if (!url) throw new ApiError("No Migma proxy is configured", 0);
+    return url;
+  };
+
+  // Spicetify names the client's own token differently across releases, so each known shape is read
+  // in turn and the first non-empty string wins. None of them prompts and none of them asks for a
+  // scope: this is the session the user already has.
+  function spotifyToken() {
+    const platform = (window.Spicetify && Spicetify.Platform) || {};
+    const auth = platform.AuthorizationAPI || {};
+    const reads = [
+      () => auth.getState && auth.getState().accessToken,
+      () => auth._state && auth._state.accessToken,
+      () => platform.Session && platform.Session.accessToken,
+      () => platform.Session && platform.Session.access_token
+    ];
+    for (const read of reads) {
+      let value = "";
+      try {
+        value = read();
+      } catch (e) {
+        value = "";
+      }
+      if (typeof value === "string" && value) return value;
+    }
+    return "";
   }
 
-  async function describe(res) {
+  // A body is what makes the content type meaningful, and declaring it on a bodyless read would
+  // force a preflight that the read does not otherwise need.
+  function headers(accept, token, hasBody) {
+    const out = { Accept: accept, "X-Migma-Client": CLIENT };
+    if (hasBody) out["Content-Type"] = "application/json";
+    if (token) out["Migma-Session"] = token;
+    return out;
+  }
+
+  // Migma answers a failure with `{success:false, error:"…"}` and carries the request id under
+  // `metadata`, so a failed reply is read once, up front: the message, the id and the rate-limit
+  // wait all come out of that single body. The header readings are fallbacks for whatever the proxy
+  // decides to surface on its own behalf.
+  async function failure(res) {
+    let body = null;
     try {
-      const data = await res.json();
-      return (data.error && data.error.message) || data.message || `Migma returned ${res.status}`;
+      body = await res.json();
     } catch (e) {
-      if (res.status === 401 || res.status === 403) return "Key no longer valid";
-      return `Migma returned ${res.status}`;
+      body = null;
     }
+    const raw = body && body.error;
+    const message =
+      (typeof raw === "string" && raw.trim()) ||
+      (raw && typeof raw.message === "string" && raw.message.trim()) ||
+      (body && typeof body.message === "string" && body.message.trim()) ||
+      (res.status === 401 || res.status === 403
+        ? "The proxy refused this session"
+        : `Migma returned ${res.status}`);
+    const meta = (body && body.metadata) || {};
+    // The reset is published as an epoch timestamp; a small number is a wait in seconds instead, so
+    // both readings are accepted and the plausible one wins.
+    const reset = Number(res.headers.get("x-ratelimit-reset")) || 0;
+    const seconds =
+      Number(body && (body.retryAfter || body.retry_after)) ||
+      Number(res.headers.get("retry-after")) ||
+      (reset > 1e6 ? Math.round(reset - Date.now() / 1000) : reset);
+    return {
+      message,
+      requestId: meta.requestId || meta.request_id || res.headers.get("x-request-id") || "",
+      retryAfter: seconds > 0 ? Math.min(Math.round(seconds), 120) : 0
+    };
+  }
+  // The session is the proxy's own resource rather than a forwarded Migma one, so both a plain
+  // object and the same envelope Migma uses are accepted. A floor under the lifetime keeps a proxy
+  // that reports an implausibly short one from turning every call into two.
+  async function authorize(signal) {
+    const base = proxyBase();
+    if (session && session.base === base && session.expires > Date.now() + SKEW) return session.token;
+    session = null;
+
+    const spotify = spotifyToken();
+    if (!spotify) throw new ApiError("Spotify has not finished signing in yet", 0);
+
+    const res = await request(ENDPOINTS.session, {
+      method: "POST",
+      signal,
+      auth: false,
+      retries: 1,
+      body: { spotify_token: spotify, client: CLIENT }
+    });
+    const body = await res.json();
+    const out = (body && body.data) || body || {};
+    const token = [out.token, out.session_token, out.access_token].find(
+      v => typeof v === "string" && v.trim()
+    );
+    if (!token) throw new ApiError("The proxy did not return a session", 502);
+    const ttl = Number(out.expires_in || out.expiresIn) || 300;
+    session = { base, token, expires: Date.now() + Math.max(SKEW * 2, ttl * 1000) };
+    return token;
   }
 
   async function request(path, opts = {}) {
-    const { method = "GET", body, signal, retries = 2, accept = "application/json" } = opts;
-    const base = Migma.store.get().baseUrl.replace(/\/+$/, "");
+    const { method = "GET", body, signal, retries = 2, accept = "application/json", auth = true } = opts;
+    const base = proxyBase();
     let attempt = 0;
+    let reminted = false;
 
     for (;;) {
+      const token = auth ? await authorize(signal) : "";
       let res;
       try {
         res = await fetch(base + path, {
           method,
           signal,
-          headers: headers(accept),
+          headers: headers(accept, token, body !== undefined),
           body: body === undefined ? undefined : JSON.stringify(body)
         });
       } catch (err) {
@@ -131,20 +231,28 @@ Migma.api = (() => {
           await sleep(400 * attempt, signal);
           continue;
         }
-        throw new ApiError("Could not reach Migma", 0);
+        throw new ApiError("Could not reach the Migma proxy", 0);
       }
       if (res.ok) return res;
 
-      const requestId = res.headers.get("x-request-id") || "";
+      const fail = await failure(res);
+
+      // A short-lived session reaching its end mid-call is how it is meant to expire rather than a
+      // fault, so the first 401 mints another and repeats the call. A second means the proxy is
+      // refusing the Spotify session itself, which no retry repairs.
+      if (res.status === 401 && auth && !reminted) {
+        reminted = true;
+        endSession();
+        continue;
+      }
 
       if (res.status === 429) {
-        const header = Number(res.headers.get("retry-after"));
-        const wait = header > 0 ? header * 1000 : 2000 * (attempt + 1);
+        const wait = fail.retryAfter > 0 ? fail.retryAfter * 1000 : 2000 * (attempt + 1);
         if (attempt++ < retries) {
           await sleep(wait, signal);
           continue;
         }
-        throw new ApiError("Migma is rate limiting this workspace", 429, requestId, Math.round(wait / 1000));
+        throw new ApiError(fail.message, 429, fail.requestId, Math.round(wait / 1000));
       }
 
       if (res.status >= 500 && attempt++ < retries) {
@@ -152,7 +260,7 @@ Migma.api = (() => {
         continue;
       }
 
-      throw new ApiError(await describe(res), res.status, requestId);
+      throw new ApiError(fail.message, res.status, fail.requestId, fail.retryAfter);
     }
   }
 
@@ -644,6 +752,7 @@ Migma.api = (() => {
   return {
     ApiError,
     ENDPOINTS,
+    endSession,
     playlist,
     playlistTracks,
     artists,

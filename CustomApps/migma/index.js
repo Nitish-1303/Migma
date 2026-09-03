@@ -254,8 +254,7 @@ window.Migma = window.Migma || {};
 
   function ConnectView({ theme, onTheme, onConnected, onForget }) {
     const saved = Migma.store.get();
-    const [key, setKey] = useState(saved.apiKey);
-    const [baseUrl, setBaseUrl] = useState(saved.baseUrl);
+    const [proxyUrl, setProxyUrl] = useState(saved.proxyUrl);
     const [projects, setProjects] = useState([]);
     const [projectId, setProjectId] = useState(saved.projectId);
     const [status, setStatus] = useState(null);
@@ -263,8 +262,8 @@ window.Migma = window.Migma || {};
     const abort = useRef(null);
     const live = useRef(true);
 
-    // Check key can be pressed again before the first answer arrives, and the project list is what
-    // connect() saves against — so the reply to a superseded key is cancelled outright rather than
+    // The check can be pressed again before the first answer arrives, and the project list is what
+    // connect() saves against — so the reply to a superseded proxy is cancelled outright rather than
     // left to fill the select with another workspace's projects.
     useEffect(() => {
       live.current = true;
@@ -281,7 +280,10 @@ window.Migma = window.Migma || {};
       const usable = () => live.current && !ctrl.signal.aborted;
       setBusy(true);
       setStatus(null);
-      Migma.store.set({ apiKey: key.trim(), baseUrl: baseUrl.trim() });
+      // Any session already in hand was granted by whatever proxy was configured a moment ago, so it
+      // is dropped before the new address is asked for one.
+      Migma.store.set({ proxyUrl: proxyUrl.trim() });
+      Migma.api.endSession();
       try {
         const list = await Migma.api.projects(ctrl.signal);
         if (!usable()) return;
@@ -290,7 +292,7 @@ window.Migma = window.Migma || {};
         setStatus(
           list.length
             ? { kind: "ok", text: `${list.length} project${list.length > 1 ? "s" : ""} found` }
-            : { kind: "warn", text: "Key accepted, but this workspace has no projects yet" }
+            : { kind: "warn", text: "Proxy reachable, but this workspace has no projects yet" }
         );
       } catch (err) {
         const e = toError(err);
@@ -319,7 +321,7 @@ window.Migma = window.Migma || {};
         h(
           "p",
           { className: "mg-sub" },
-          "Paste a workspace API key to let Migma read a playlist and draft campaigns against your projects."
+          "Point the plugin at your Migma proxy. It holds the workspace key and signs every request, so this client never handles one."
         )
       ),
       h(
@@ -327,24 +329,21 @@ window.Migma = window.Migma || {};
         null,
         h(
           U.Field,
-          { label: "API key", hint: "Migma → Settings → Developer → API keys." },
+          {
+            label: "Proxy URL",
+            hint: "Your own service. It exchanges this client's Spotify session for a scoped one and signs to Migma."
+          },
           h(U.Input, {
-            type: "password",
-            value: key,
-            placeholder: "mg_live_…",
-            onChange: e => setKey(e.target.value),
+            value: proxyUrl,
+            placeholder: "https://your-proxy.example",
+            onChange: e => setProxyUrl(e.target.value),
             onKeyDown: e => e.key === "Enter" && validate()
           })
         ),
         h(
-          U.Field,
-          { label: "API base URL" },
-          h(U.Input, { value: baseUrl, onChange: e => setBaseUrl(e.target.value) })
-        ),
-        h(
           U.Btn,
-          { variant: "ghost", block: true, disabled: busy || !key.trim(), onClick: validate },
-          busy ? "Checking…" : "Check key"
+          { variant: "ghost", block: true, disabled: busy || !proxyUrl.trim(), onClick: validate },
+          busy ? "Checking…" : "Check connection"
         ),
         status &&
           h("p", { className: cxStatus(status.kind) }, status.text),
@@ -360,7 +359,7 @@ window.Migma = window.Migma || {};
             onChange: setProjectId,
             options: projects.length
               ? projects.map(p => ({ value: p.id, label: p.name }))
-              : [{ value: "", label: "Check your key first" }]
+              : [{ value: "", label: "Check the connection first" }]
           })
         ),
         h(U.Btn, { block: true, disabled: !projectId, onClick: connect }, "Connect")
@@ -377,10 +376,10 @@ window.Migma = window.Migma || {};
         h(
           "p",
           { className: "mg-hint" },
-          "The key is stored in this Spotify client's local storage as plain text and is sent only to the base URL above. Use a scoped, revocable key."
+          "No Migma key is stored here. The plugin presents the Spotify session this client already holds and the proxy returns a short-lived, scoped one, kept in memory only."
         ),
         onForget &&
-          h(U.Btn, { variant: "ghost", size: "sm", block: true, onClick: onForget }, "Disconnect and clear key")
+          h(U.Btn, { variant: "ghost", size: "sm", block: true, onClick: onForget }, "Disconnect")
       )
     );
   }
@@ -1751,15 +1750,15 @@ window.Migma = window.Migma || {};
 
     function ErrorBody() {
       const e = state.error;
-      const badKey = e.status === 401 || e.status === 403;
+      const refused = e.status === 401 || e.status === 403;
       return h(U.StateView, {
-        glyph: e.status === 429 ? "⏱" : badKey ? "⚿" : "!",
+        glyph: e.status === 429 ? "⏱" : refused ? "⚿" : "!",
         tone: e.status === 429 ? "warn" : "err",
-        title: badKey ? "Key no longer valid" : e.status === 429 ? "Slow down a moment" : "Migma didn't respond",
+        title: refused ? "Session refused" : e.status === 429 ? "Slow down a moment" : "Migma didn't respond",
         note: e.message,
         meta: [e.status || "network", e.requestId].filter(Boolean).join(" · "),
-        action: badKey
-          ? h(U.Btn, { size: "sm", onClick: openSettings }, "Update key")
+        action: refused
+          ? h(U.Btn, { size: "sm", onClick: openSettings }, "Check connection")
           : h(
               U.Btn,
               {
@@ -1840,7 +1839,7 @@ window.Migma = window.Migma || {};
       body = h(ErrorBody);
     } else if (state.view === "settings" || !connected) {
       // Step one owns the connect form: an unconnected workspace has nothing to pick from, so the
-      // key, the project and the appearance sit exactly where the flow already is.
+      // proxy, the project and the appearance sit exactly where the flow already is.
       body = h(ConnectView, {
         theme: settings.theme,
         onTheme: v => onSetting({ theme: v }),
@@ -1851,6 +1850,7 @@ window.Migma = window.Migma || {};
         },
         onForget: connected
           ? () => {
+              Migma.api.endSession();
               Migma.store.forget();
               setSettings(Migma.store.get());
               patch(Object.assign({}, blank));
