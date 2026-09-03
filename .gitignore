@@ -1,6 +1,7 @@
-# Credentials. Nothing in this tree holds one today — the Migma API key lives in the Spotify
-# client's local storage under `migma:settings`, never on disk — but an ignore rule only helps
-# if it is in place before the mistake, not after it.
+# Credentials. Nothing in this tree holds one, and nothing is meant to — the plugin never receives
+# a Migma key, since a proxy holds it and signs on the client's behalf, and the scoped session the
+# client does hold lives in memory only. The rule still earns its place: it only helps if it is in
+# place before the mistake, not after it.
 .env
 .env.*
 *.pem
