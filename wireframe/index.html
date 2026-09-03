@@ -50,17 +50,6 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 .frame>.flabel{position:absolute;top:-25px;left:2px;font-size:11px;color:var(--tx3);letter-spacing:.04em;white-space:nowrap}
 .frame>.flabel b{color:var(--tx2);font-weight:600}
 .fwrap{padding-top:26px}
-/* ---------- annotation callouts ---------- */
-.cal{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;
- border-radius:999px;background:#fff;color:#000;font-size:11px;font-weight:700;line-height:1;
- box-shadow:0 0 0 3px rgba(255,255,255,.14);vertical-align:middle}
-.cal.abs{position:absolute;z-index:6}
-.notes{border:1px solid var(--line);border-radius:var(--r3);background:var(--s1);padding:18px 20px;min-width:290px;flex:1 1 300px;max-width:420px}
-.notes h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:12px}
-.notes ol{list-style:none;display:flex;flex-direction:column;gap:11px}
-.notes li{font-size:13px;color:var(--tx2);display:flex;gap:10px;line-height:1.5}
-.notes li b{color:var(--tx);font-weight:600}
-
 /* ---------- generic atoms used inside frames ---------- */
 .btn{border:0;border-radius:var(--r2);font-family:var(--f);font-size:13px;font-weight:700;padding:10px 18px;cursor:default;
  letter-spacing:.2px;color:#000;background:linear-gradient(180deg,#fff 0%,#f0f0f0 100%);
@@ -73,13 +62,10 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 .btn.sm{padding:7px 13px;font-size:12px;border-bottom-width:2px}
 .btn.mg.sm,.btn.ghost.sm{border-bottom-width:1px}
 .btn.block{width:100%;text-align:center}
-.btn[disabled]{opacity:.38}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#a1a1aa;
  border:1px solid var(--line);border-radius:var(--r1);padding:5px 9px;background:#1e1e1e}
 .chip.on{color:#000;border-color:#fff;background:#fff}
 .chip.sp{color:var(--ok);border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.08)}
-.chip.ai{color:#fff;border:1px solid transparent;background-image:linear-gradient(#1e1e1e,#1e1e1e),var(--spec);
- background-origin:border-box;background-clip:padding-box,border-box;background-size:auto,300% 100%;animation:sweep 7s linear infinite}
 .inp{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 13px;
  font-family:var(--f);font-size:13px;color:var(--tx)}
 .inp.ph{color:var(--tx3)}
@@ -227,7 +213,7 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 .etl .er u{margin-left:auto;text-decoration:none;color:#71717a;font-size:11px;font-variant-numeric:tabular-nums}
 .ecta{display:block;text-align:center;background:#1d1e20;color:#fff;font-weight:700;font-size:13px;padding:14px;border-radius:8px}
 .efoot{padding:14px 18px;background:#f8f8fa;border-top:1px solid #e4e4e7;font-size:10.5px;color:#71717a;text-align:center;line-height:1.7}
-/* ---------- states, spec, flow ---------- */
+/* ---------- states and flow ---------- */
 .mini{width:300px;height:330px}
 .state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;text-align:center;height:100%;padding:26px}
 .glyph{width:46px;height:46px;border-radius:var(--r3);display:grid;place-items:center;font-family:var(--fd);font-size:20px;font-weight:700;
@@ -240,19 +226,6 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 .spin{width:26px;height:26px;border-radius:50%;border:2px solid var(--s3);border-top-color:var(--mg);animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
-.specgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:18px}
-.card{border:1px solid var(--line);border-radius:var(--r3);background:var(--s1);padding:18px}
-.card h4{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin-bottom:14px}
-.sw{display:flex;align-items:center;gap:11px;padding:7px 0;font-size:12px}
-.sw i{width:26px;height:26px;border-radius:6px;flex:none;border:1px solid rgba(255,255,255,.08)}
-.sw b{font-weight:600}
-.sw u{margin-left:auto;text-decoration:none;color:var(--tx3);font-family:ui-monospace,monospace;font-size:11px}
-.tscale div{padding:7px 0;border-bottom:1px solid var(--lineS);display:flex;align-items:baseline;gap:12px}
-.tscale u{text-decoration:none;margin-left:auto;font-size:10.5px;color:var(--tx3);font-family:ui-monospace,monospace;white-space:nowrap}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);padding:0 8px 9px 0;font-weight:600}
-td{padding:8px 8px 8px 0;border-top:1px solid var(--lineS);color:var(--tx2);vertical-align:top}
-td b{color:var(--tx);font-weight:600}
 code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospace;font-size:11.5px;color:#e2e2e3;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px}
 
 /* The flow, one card per step. Inline SVG rather than a linked file, so the standalone
@@ -292,9 +265,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 <section class="cover">
   <div class="eyebrow">Spicetify custom app</div>
   <h1>Playlist&#8209;to&#8209;Email <em>Campaign Automator</em></h1>
-  <p class="lede">Turn any Spotify playlist into a ready-to-send Migma email campaign without leaving the client.
-  Migma reads the playlist's metadata, derives an audience digest, proposes campaign angles, then streams a
-  finished email into a live preview that pushes straight back to a Migma project.</p>
+  <p class="lede">Turn any Spotify playlist into a ready-to-send Migma email campaign without leaving the client.</p>
   <div class="meta">
     <span>Surface — Spicetify custom app + topbar button + playlist context menu</span>
     <span>Theme — Spotify dark shell, Migma tokens verbatim</span>
@@ -304,9 +275,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 
 <section class="sec">
   <div class="sechd"><span class="num">00</span><h2>Flow</h2>
-    <p>Three steps, and their three names are the whole navigation model. A step is one surface that fills
-    in as work finishes, not a screen that hands off to the next — which is why the seven mockups below sit
-    inside three steps rather than seven. The rail under the header is the only way back.</p></div>
+    <p>Three steps. The rail under the header is the only way back.</p></div>
   <svg class="hiw" viewBox="118 292 1684 648" role="img" aria-labelledby="hiwT hiwD">
     <title id="hiwT">How it works — the three steps drawn out</title>
     <desc id="hiwD">Four cards left to right on a connector line: Entry, step 1 Pick a playlist, step 2 Choose
@@ -409,7 +378,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 
 <section class="sec">
   <div class="sechd"><span class="num">01</span><h2>Entry points</h2>
-    <p>Three ways in, all landing on the same route. Nothing about the stock client moves or breaks.</p></div>
+    <p>Three ways in, all landing on the same route.</p></div>
   <div class="row">
     <div class="fwrap">
     <div class="frame">
@@ -419,7 +388,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           <div class="sbox">
             <div class="snav act"><i class="ic"></i>Home</div>
             <div class="snav"><i class="ic"></i>Search</div>
-            <div class="snav migma"><i class="ic"></i>Migma <span class="cal" style="margin-left:auto">1</span></div>
+            <div class="snav migma"><i class="ic"></i>Migma</div>
           </div>
           <div class="sbox lib">
             <div class="snav" style="font-size:13px">Your Library</div>
@@ -433,7 +402,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           <div class="topbar">
             <i class="nubbin"></i><i class="nubbin"></i>
             <span class="tb-title">Late Night Static</span>
-            <span class="mgpill"><i class="dot"></i>Campaign<span class="cal abs" style="top:-9px;right:-9px">2</span></span>
+            <span class="mgpill"><i class="dot"></i>Campaign</span>
             <i class="nubbin" style="border-radius:999px;width:auto;padding:0 12px;height:30px;line-height:30px;font-size:11px;color:var(--tx2)">Nitish</i>
           </div>
           <div class="plhead">
@@ -451,7 +420,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <div class="ctxmenu">
               <i><span class="sq"></span>Add to queue</i>
               <i><span class="sq"></span>Edit details</i>
-              <i class="hl"><span class="sq"></span>Create Migma campaign<span class="cal" style="margin-left:auto">3</span></i>
+              <i class="hl"><span class="sq"></span>Create Migma campaign</i>
               <i><span class="sq"></span>Copy link to playlist</i>
             </div>
           </div>
@@ -470,21 +439,12 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
       </div>
     </div>
     </div>
-    <div class="notes">
-      <h4>Notes</h4>
-      <ol>
-        <li><span class="cal">1</span><span><b>Sidebar nav item.</b> Registered as a custom app, so it behaves like a first-class page with real history and a deep-linkable route.</span></li>
-        <li><span class="cal">2</span><span><b>Topbar button.</b> Context-aware label. On a playlist page it reads <b>Campaign</b> and carries that playlist straight into the digest; anywhere else it reads <b>Migma</b> and opens the source picker.</span></li>
-        <li><span class="cal">3</span><span><b>Context menu item.</b> Only appears on playlist URIs. Skips the picker entirely and lands on the digest.</span></li>
-        <li><span class="cal">·</span><span>A green dot replaces the Migma mark on the topbar pill while a campaign is streaming, so the user can navigate away and come back.</span></li>
-      </ol>
-    </div>
   </div>
 </section>
 
 <section class="sec">
   <div class="sechd"><span class="num">02</span><h2>Step 1 · Connect &amp; source</h2>
-    <p>One-time auth, then a source picker that defaults to whatever the user is already looking at.</p></div>
+    <p>One-time auth, then a picker that defaults to the playlist on screen.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>02 · Connect</b> — 452 × 686 · first run</div>
       <div class="panel">
@@ -504,13 +464,13 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <div class="field">
               <label class="lbl">Workspace project</label>
               <div class="inp" style="display:flex;align-items:center"><span>Sorrel Kane — Artist</span><span style="margin-left:auto;color:var(--tx3)">▾</span></div>
-              <div class="hint">Generated campaigns are saved as drafts here.<span class="cal" style="margin-left:6px">5</span></div>
+              <div class="hint">Generated campaigns are saved as drafts here.</div>
             </div>
             <button class="btn mg block">Connect</button>
           </div>
           <div style="margin-top:auto">
             <div class="divider"></div>
-            <p class="hint" style="margin:0">The key is stored in the Spotify client's local storage on this machine and is sent only to <code>api.migma.ai</code>. Clearing it in Settings revokes local access immediately.<span class="cal" style="margin-left:6px">4</span></p>
+            <p class="hint" style="margin:0">The key is stored in the Spotify client's local storage on this machine and is sent only to <code>api.migma.ai</code>. Clearing it in Settings revokes local access immediately.</p>
           </div>
         </div>
         <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i></span>
@@ -529,7 +489,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <div class="srccard sel">
               <i class="cover-art"></i>
               <div style="min-width:0"><b>Late Night Static</b><s>Nitish · 128 tracks · 4,213 followers</s></div>
-              <span class="chip on" style="margin-left:auto">Selected<span class="cal" style="margin-left:5px">6</span></span>
+              <span class="chip on" style="margin-left:auto">Selected</span>
             </div>
           </div>
           <div>
@@ -550,20 +510,11 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           <span class="sp-r"><button class="btn mg sm">Analyse playlist</button></span></div>
       </div>
     </div></div>
-    <div class="notes">
-      <h4>Notes</h4>
-      <ol>
-        <li><span class="cal">4</span><span><b>Key storage is disclosed in-frame.</b> Local storage in the Spotify client is plain text on disk — say so rather than implying a keychain. A scoped, revocable key is the mitigation.</span></li>
-        <li><span class="cal">5</span><span><b>Project select is disabled</b> until the key validates, then populated from <code>GET /v1/projects</code>. Failed validation shows inline under the key field, not as a toast.</span></li>
-        <li><span class="cal">6</span><span><b>On-screen playlist wins.</b> Read from the current route first, falling back to the playing context, then to nothing. Never silently guess a different playlist.</span></li>
-        <li><span class="cal">·</span><span>Reachable states: nothing detected → the picker becomes the primary block; no playlists at all → empty state in frame 08.</span></li>
-      </ol>
-    </div>
   </div>
 </section>
 <section class="sec">
   <div class="sechd"><span class="num">03</span><h2>Steps 1–2 · Digest &amp; ideas</h2>
-    <p>The digest is the whole bet: it is the only thing Migma is told about the playlist, so it has to be legible.</p></div>
+    <p>The digest is all Migma is told about the playlist.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>04 · Digest</b> — 452 × 686 · derived client-side</div>
       <div class="panel">
@@ -577,7 +528,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <div class="tile"><b>62</b><s>Popularity</s></div>
           </div>
           <div>
-            <label class="lbl">Top genres <span class="cal" style="margin-left:4px">7</span></label>
+            <label class="lbl">Top genres</label>
             <div class="bars">
               <div class="bar"><em>indie sleaze</em><span class="tr"><b style="width:88%"></b></span><u>22%</u></div>
               <div class="bar"><em>bedroom pop</em><span class="tr"><b style="width:72%"></b></span><u>18%</u></div>
@@ -599,7 +550,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
               <span class="chip on">night listeners</span><span class="chip on">discovery-forward</span>
               <span class="chip on">long-session</span><span class="chip">low-mainstream</span>
             </div>
-            <p class="hint">Derived from playlist metadata, artist genres and release dates. No audio-features call — that endpoint is deprecated for new clients.<span class="cal" style="margin-left:5px">8</span></p>
+            <p class="hint">Derived from playlist metadata, artist genres and release dates. No audio-features call — that endpoint is deprecated for new clients.</p>
           </div>
         </div>
         <div class="pfoot"><span class="stepdots"><i class="on"></i><i></i><i></i></span>
@@ -635,20 +586,11 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           <span class="sp-r"><button class="btn mg sm">Open canvas</button></span></div>
       </div>
     </div></div>
-    <div class="notes">
-      <h4>Notes</h4>
-      <ol>
-        <li><span class="cal">7</span><span><b>Genre percentages are share of tracks</b>, not share of artists, so a prolific artist doesn't distort the read. Ties broken by artist follower count.</span></li>
-        <li><span class="cal">8</span><span><b>No fake mood science.</b> Energy/valence scoring would need <code>audio-features</code>, which Spotify closed to new clients — the tags come from genre and era instead and the panel says so.</span></li>
-        <li><span class="cal">9</span><span><b>Cards are radio, not checkbox.</b> Exactly one angle carries into the canvas; the other two stay retrievable via back.</span></li>
-        <li><span class="cal">·</span><span>Match strength is Migma's own confidence, passed through verbatim. If the field is missing, the label is hidden rather than defaulted.</span></li>
-      </ol>
-    </div>
   </div>
 </section>
 <section class="sec">
   <div class="sechd"><span class="num">04</span><h2>Step 2 · Choose &amp; refine</h2>
-    <p>Brief on the left, live email on the right. Output streams in token by token so a long generation never looks stalled.</p></div>
+    <p>Brief on the left, live email on the right.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>06 · Canvas</b> — 928 × 686 · streaming</div>
       <div class="panel wide">
@@ -669,7 +611,7 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <div class="trow2">Brand colour<span class="swatch"></span></div>
             <div class="trow2">Include tracklist<span class="tog on"><b></b></span></div>
             <div class="trow2" style="border:0">Include cover art<span class="tog on"><b></b></span></div>
-            <div class="field" style="margin-top:14px"><label class="lbl">Brief sent to Migma <span class="cal" style="margin-left:4px">10</span></label>
+            <div class="field" style="margin-top:14px"><label class="lbl">Brief sent to Migma</label>
               <div class="ta">Write a direct, standard-length campaign email for the playlist “Late Night Static” (128 tracks, 47 artists, 8h 12m). Audience skews night listeners, discovery-forward, low-mainstream. Dominant genres: indie sleaze, bedroom pop, shoegaze. Angle: the 2am playlist drop. CTA “Listen now”.</div></div>
           </div>
           <div class="preview">
@@ -698,22 +640,12 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
           <span class="sp-r" style="display:flex;gap:9px"><button class="btn ghost sm">Stop</button><button class="btn mg sm">Save to Migma</button></span></div>
       </div>
     </div></div>
-    <div class="notes" style="max-width:340px">
-      <h4>Notes</h4>
-      <ol>
-        <li><span class="cal">10</span><span><b>The brief is visible and editable.</b> The user can always see exactly what is being sent, which is also the fastest way to debug a bad generation.</span></li>
-        <li><span class="cal">11</span><span><b>Streamed, not awaited.</b> Response is read as a stream and appended; the caret marks the write head. <b>Stop</b> aborts the request and keeps what has already landed.</span></li>
-        <li><span class="cal">12</span><span><b>Tracklist rows come from Spotify</b>, never from the model, so titles and durations can't be hallucinated.</span></li>
-        <li><span class="cal">·</span><span>Changing any control after a generation marks the preview stale and turns the primary button into <b>Regenerate</b>.</span></li>
-        <li><span class="cal">·</span><span>At &lt; 1100px the split collapses to stacked, brief first, with the preview behind a tab.</span></li>
-      </ol>
-    </div>
   </div>
 </section>
 
 <section class="sec">
   <div class="sechd"><span class="num">05</span><h2>Step 3 · Save &amp; export</h2>
-    <p>Spotify is not an email client. The plugin hands off; Migma owns sending, lists and consent.</p></div>
+    <p>The plugin hands off; Migma owns sending, lists and consent.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>07 · Deliver</b> — 452 × 686 · handoff</div>
       <div class="panel">
@@ -737,24 +669,16 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
             <button class="btn ghost block">Copy HTML</button>
             <button class="btn ghost block">Download .html</button>
           </div>
-          <div style="margin-top:auto"><p class="hint" style="margin:0">Sending, list management and unsubscribe handling stay in Migma. The plugin never holds recipient data.<span class="cal" style="margin-left:5px">13</span></p></div>
+          <div style="margin-top:auto"><p class="hint" style="margin:0">Sending, list management and unsubscribe handling stay in Migma. The plugin never holds recipient data.</p></div>
         </div>
         <div class="pfoot"><span class="chip">Done</span><span class="sp-r"><button class="btn ghost sm">Create another</button></span></div>
       </div>
     </div></div>
-    <div class="notes">
-      <h4>Notes</h4>
-      <ol>
-        <li><span class="cal">13</span><span><b>Hard boundary.</b> No recipient addresses, no send action, no list storage inside the Spotify client. That keeps the plugin out of scope for consent and deliverability, which is the right place for it to be.</span></li>
-        <li><span class="cal">·</span><span><b>Copy HTML</b> yields inline-styled, table-based markup that survives Outlook; the on-screen preview is the same HTML in an iframe.</span></li>
-        <li><span class="cal">·</span><span><b>Create another</b> returns to step one with the playlist still selected and its digest still cached, so a second campaign from the same playlist re-reads nothing from Spotify.</span></li>
-      </ol>
-    </div>
   </div>
 </section>
 <section class="sec">
   <div class="sechd"><span class="num">06</span><h2>States</h2>
-    <p>Every network step has all five. Skeletons for first load, inline text for validation, toasts only for background work.</p></div>
+    <p>Every network step has all five.</p></div>
   <div class="row">
     <div class="fwrap"><div class="frame"><div class="flabel"><b>08a</b> — Loading</div>
       <div class="panel mini"><div class="pbody" style="gap:13px">
@@ -800,111 +724,6 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
         <span style="font-size:10.5px;color:var(--tx3)">401 · unauthorized</span>
       </div></div>
     </div></div>
-  </div>
-</section>
-<section class="sec">
-  <div class="sechd"><span class="num">07</span><h2>Tokens &amp; spec</h2>
-    <p>Every value below is lifted from migma.ai's own stylesheet, not approximated. Spotify green survives only inside the mocked client chrome; every Migma-owned state uses Migma's own success, warn and error tokens.</p></div>
-  <div class="specgrid">
-    <div class="card"><h4>Colour</h4>
-      <div class="sw"><i style="background:#0a0a0a"></i><b>Surface</b><u>#0A0A0A</u></div>
-      <div class="sw"><i style="background:#0f0f0f"></i><b>Page</b><u>#0F0F0F</u></div>
-      <div class="sw"><i style="background:#161616"></i><b>Raised</b><u>#161616</u></div>
-      <div class="sw"><i style="background:#2a2a2a"></i><b>Line</b><u>#2A2A2A</u></div>
-      <div class="sw"><i style="background:#353535"></i><b>Hover</b><u>#353535</u></div>
-      <div class="sw"><i style="background:#939393"></i><b>Text tertiary</b><u>#939393</u></div>
-      <div class="sw"><i style="background:#e2e2e3"></i><b>Text secondary</b><u>#E2E2E3</u></div>
-      <div class="sw"><i style="background:linear-gradient(180deg,#fff,#f0f0f0)"></i><b>Primary action</b><u>#FFF→#F0F0F0</u></div>
-      <div class="sw"><i style="background:#1ed760"></i><b>Spotify green</b><u>#1ED760</u></div>
-      <div class="sw"><i style="background:#22c55e"></i><b>Success</b><u>#22C55E</u></div>
-      <div class="sw"><i style="background:linear-gradient(120deg,#a649f8,#e3185f 28%,#f74a06 55%,#f38c05 76%,#ffc400)"></i><b>Generative</b><u>8-stop spectrum</u></div>
-      <div class="sw"><i style="background:#f38c05"></i><b>Warn</b><u>#F38C05</u></div>
-      <div class="sw"><i style="background:#ef4444"></i><b>Error</b><u>#EF4444</u></div>
-      <p class="hint">Migma is monochrome — a white raised button, not a coloured one. The spectrum is reserved for generative surfaces: the AI canvas border, the stream chip, the bar fills. Six places, one token.</p>
-    </div>
-    <div class="card tscale"><h4>Type — Migma display + system sans</h4>
-      <div><span style="font-family:var(--fd);font-size:21px;font-weight:700;letter-spacing:.5px">Display</span><u>21 / 700 / +.5px</u></div>
-      <div><span style="font-family:var(--fd);font-size:15px;font-weight:700;letter-spacing:.5px">Section</span><u>15 / 700 / +.5px</u></div>
-      <div><span style="font-family:var(--fd);font-size:13.5px;font-weight:700;letter-spacing:.5px">Card title</span><u>13.5 / 700</u></div>
-      <div><span style="font-size:13px">Body</span><u>13 / 400 / 1.45</u></div>
-      <div><span style="font-size:12.5px;color:var(--tx2)">Secondary</span><u>12.5 / 400</u></div>
-      <div><span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);font-weight:600">Label</span><u>11 / 600 / +6%</u></div>
-      <div style="border:0"><span style="font-size:11px;color:var(--tx3)">Hint</span><u>11 / 400</u></div>
-      <p class="hint">Headings use Migma's own display face at <b>+0.5px</b> tracking — the two <code>.woff2</code> files ship inside the app folder and fall back to <code>migma.ai/fonts</code>, then to the system stack. Spacing 4 · 6 · 9 · 11 · 14 · 18 · 22. Radii 4 · 6 · 8 · 12 · 16 — no pills anywhere.</p>
-    </div>
-    <div class="card"><h4>Motion</h4>
-      <table>
-        <tr><th>Element</th><th>Change</th><th>Timing</th></tr>
-        <tr><td><b>Panel enter</b></td><td>fade + 8px rise</td><td>300ms <code>(.33,1,.68,1)</code></td></tr>
-        <tr><td><b>Step change</b></td><td>x-slide 12px, no fade</td><td>200ms <code>(0,0,.2,1)</code></td></tr>
-        <tr><td><b>Button press</b></td><td>2px drop, bottom 3→1px</td><td>60ms</td></tr>
-        <tr><td><b>Idea select</b></td><td>border + inset ring</td><td>150ms</td></tr>
-        <tr><td><b>Stream text</b></td><td>append, caret blink</td><td>1s steps(2)</td></tr>
-        <tr><td><b>Spectrum sweep</b></td><td>pan 300% background</td><td>7s linear</td></tr>
-        <tr><td><b>Skeleton</b></td><td>sheen sweep</td><td>1.4s linear</td></tr>
-        <tr><td><b>Toast</b></td><td>rise 10px, auto-dismiss</td><td>200ms / 4s</td></tr>
-      </table>
-      <p class="hint">Durations and curves are Migma's <code>--duration-fast/normal/slow</code> and <code>--ease-out-cubic</code>. All of it behind <code>prefers-reduced-motion</code>; the caret becomes static, the spectrum stops panning, skeletons stop sweeping.</p>
-    </div>
-    <div class="card"><h4>Component inventory</h4>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn sm">Primary</button><button class="btn mg sm">Generative</button><button class="btn ghost sm">Ghost</button>
-        <button class="btn ghost sm" disabled>Disabled</button>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
-        <span class="chip">Chip</span><span class="chip on">Chip · on</span><span class="chip sp">Status</span>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
-        <span class="tog on"><b></b></span><span class="tog"><b></b></span><span class="swatch"></span>
-        <span class="stepdots"><i class="done"></i><i class="on"></i><i></i></span><i class="spin"></i>
-      </div>
-      <div class="seg" style="margin-top:12px"><i class="on">One</i><i>Two</i><i>Three</i></div>
-      <div class="inp ph" style="margin-top:10px">Text input</div>
-      <p class="hint">12 atoms total. Native <code>Spicetify.ReactComponent</code> primitives are used for menus, tooltips and the confirm dialog so they inherit client behaviour for free.</p>
-    </div>
-  </div>
-</section>
-<section class="sec">
-  <div class="sechd"><span class="num">08</span><h2>Build &amp; data contract</h2>
-    <p>What ships, what it talks to, and the three open questions that need your confirmation.</p></div>
-  <div class="specgrid">
-    <div class="card"><h4>Surface</h4>
-      <table>
-        <tr><th>Piece</th><th>Where</th></tr>
-        <tr><td><b>Custom app</b></td><td><code>CustomApps/migma/</code> — sidebar route, all seven frames</td></tr>
-        <tr><td><b>Extension</b></td><td><code>extension.js</code> — topbar button, playlist context menu, deep links</td></tr>
-        <tr><td><b>Runtime</b></td><td>Vanilla ES2020 + <code>Spicetify.React</code>, no build step</td></tr>
-        <tr><td><b>Install</b></td><td><code>spicetify config custom_apps migma &amp;&amp; spicetify apply</code></td></tr>
-      </table>
-    </div>
-    <div class="card"><h4>Spotify reads</h4>
-      <table>
-        <tr><th>Call</th><th>For</th></tr>
-        <tr><td><code>/v1/playlists/{id}</code></td><td>name, art, followers, owner</td></tr>
-        <tr><td><code>/v1/playlists/{id}/tracks</code></td><td>tracks, paginated 100 at a time</td></tr>
-        <tr><td><code>/v1/artists?ids=</code></td><td>genres + popularity, batched 50</td></tr>
-        <tr><td><code>/v1/me/playlists</code></td><td>source picker</td></tr>
-      </table>
-      <p class="hint">Read-only, through the client's own session via <code>CosmosAsync</code> — no separate OAuth prompt, no scopes to request.</p>
-    </div>
-    <div class="card"><h4>Migma writes</h4>
-      <table>
-        <tr><th>Call</th><th>For</th></tr>
-        <tr><td><code>GET /v1/projects</code></td><td>project picker</td></tr>
-        <tr><td><code>POST /v1/campaigns/ideas</code></td><td>digest → three angles</td></tr>
-        <tr><td><code>POST /v1/campaigns/generate</code></td><td>brief → streamed email</td></tr>
-        <tr><td><code>POST /v1/campaigns</code></td><td>save draft to project</td></tr>
-      </table>
-      <p class="hint">Every path and field name lives in one <code>ENDPOINTS</code> map, so aligning to the real schema is a few lines rather than a refactor.</p>
-    </div>
-    <div class="card" style="border-color:rgba(243,140,5,.35);background:rgba(243,140,5,.04)">
-      <h4 style="color:var(--warn)">Open questions</h4>
-      <ol style="list-style:none;display:flex;flex-direction:column;gap:11px">
-        <li style="font-size:12.5px;color:var(--tx2);line-height:1.55"><b style="color:var(--tx)">1 · Migma API shape.</b> The four calls above are the plausible shape, not a documented one. Send me the real reference and I will align the client.</li>
-        <li style="font-size:12.5px;color:var(--tx2);line-height:1.55"><b style="color:var(--tx)">2 · Brand tokens.</b> Palette, display face and the raised-button geometry are read out of migma.ai's own stylesheet and brand kit — nothing here is invented. If the internal design system has moved past the public build, one token block updates every screen.</li>
-        <li style="font-size:12.5px;color:var(--tx2);line-height:1.55"><b style="color:var(--tx)">3 · Segments.</b> Shown as coming from Migma. If segments live elsewhere, that select becomes free text.</li>
-      </ol>
-    </div>
   </div>
 </section>
 
