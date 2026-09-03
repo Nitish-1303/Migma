@@ -307,7 +307,7 @@ Spotify's `audio-features` endpoint is closed to new clients, so there is no ene
    there. A kit that declares only an accent still renders correctly.
 9. **Segments.** Assumed to come from Migma alongside each idea. If they live elsewhere, the segment
    select becomes free text.
-10. **System appearance.** Whether `prefers-color-scheme` actually varies inside Spotify's Electron shell
+10. **System appearance.** Whether `prefers-color-scheme` varies inside Spotify's Electron shell
     depends on how that shell sets `nativeTheme.themeSource`. If it pins one value, **System** will sit on
     it and the explicit Dark and White options are the way to switch.
 
