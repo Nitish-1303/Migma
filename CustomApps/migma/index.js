@@ -8,13 +8,13 @@ window.Migma = window.Migma || {};
   const F = U.React.Fragment;
 
   // Three steps, and the sequence is the whole navigation model: pick the playlist, choose and
-  // refine the campaign, save it. Each one is a single surface that changes what it shows as the
-  // work progresses rather than a screen that hands off to the next, so there is nothing to step
-  // through inside a step. Settings sits outside the sequence.
+  // refine the campaign, review and export it. Each one is a single surface that changes what it
+  // shows as the work progresses rather than a screen that hands off to the next. Settings sits
+  // outside the sequence.
   const STEPS = [
     { value: "pick", label: "Pick a playlist" },
     { value: "refine", label: "Choose & refine" },
-    { value: "export", label: "Save & export" }
+    { value: "export", label: "Review & export" }
   ];
   const STEP_IDS = STEPS.map(s => s.value);
   const TONES = [
@@ -33,12 +33,16 @@ window.Migma = window.Migma || {};
     { value: "light", label: "White" },
     { value: "system", label: "System" }
   ];
+  // The three panes of step two. Only the brief calls a live endpoint; angles and review name
+  // capabilities Migma has not published a route for, so they render a pending state in place.
   const TABS = [
     { value: "angles", label: "Angles" },
     { value: "brief", label: "Brief" },
     { value: "review", label: "Review" }
   ];
-
+  // Offered as extra generation languages. Migma returns one email per language, so these add to
+  // the brief's own language rather than translating after the fact.
+  const GEN_LANGS = ["es", "fr", "de", "it", "pt-br", "nl", "ja", "ko"];
   // Only used to give a locale code a readable name in the select. A code that is not listed
   // still works — it falls back to the code itself rather than being hidden.
   const LOCALE_NAMES = {
@@ -81,34 +85,23 @@ window.Migma = window.Migma || {};
     source: null,
     digest: null,
     reading: false,
-    ideas: null,
-    ideaId: null,
-    body: "",
-    subject: "",
-    preheader: "",
-    draft: null,
-    busy: null,
-    error: null,
-    streaming: false,
+    tab: "brief",
+    generating: false,
+    jobState: "",
+    conversationId: "",
+    emails: null,
+    emailId: "",
     stale: false,
     query: "",
-    tab: "angles",
-    reviewers: null,
-    kits: null,
-    comments: null,
-    commentsOff: false,
-    commentDraft: "",
-    lang: "",
-    variants: {},
-    translating: false,
-    score: null,
-    scoring: false,
+    busy: null,
+    importing: false,
+    done: false,
+    error: null,
     notice: null
   };
 
   const patchReducer = (state, patch) =>
     Object.assign({}, state, typeof patch === "function" ? patch(state) : patch);
-
   const playlistId = uri => {
     const m = String(uri || "").match(/playlist[:/]([a-zA-Z0-9]+)/);
     return m ? m[1] : "";
@@ -162,18 +155,38 @@ window.Migma = window.Migma || {};
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  const metricsPayload = d => ({
-    playlist_id: d.playlist.id,
-    track_count: d.trackCount,
-    artist_count: d.artistCount,
-    avg_popularity: d.avgPopularity,
-    genres: d.genres,
-    tags: d.tags
-  });
+  function openExternal(url) {
+    try {
+      Spicetify.Platform.OpenLinkAPI.openLink(url);
+    } catch (e) {
+      window.open(url, "_blank");
+    }
+  }
+  // Migma's generated html is the real artifact, copied and downloaded verbatim — but it is never
+  // handed to the DOM. The preview renders a plain-text reading of it instead, so a generated
+  // email can be read on screen without the plugin ever injecting markup it did not author.
+  function plainText(html) {
+    if (!html) return "";
+    return String(html)
+      .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\/\s*\1\s*>/gi, " ")
+      .replace(/<\s*(?:br|\/p|\/div|\/h[1-6]|\/li|\/tr)\s*>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/&quot;/gi, '"')
+      .replace(/[ \t]+/g, " ")
+      .replace(/ *\n */g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
 
-  // metrics.js owns the export and stays untouched, so a brand kit is applied to the HTML it
-  // returns. These are the literals it writes for a white email; this list is the only place
-  // the two files are coupled by value rather than by call.
+  // metrics.js owns the local composer and stays untouched, so a brand kit is applied to the HTML
+  // it returns. These are the literals it writes for a white email; this list is the only place
+  // the two files are coupled by value rather than by call. Migma's own generation already carries
+  // the imported brand, so this only ever retints the local preview and the pre-generation export.
   const EM_COLOURS = {
     "#f4f4f5": "page",
     "#f8f8fa": "foot",
@@ -206,8 +219,8 @@ window.Migma = window.Migma || {};
     return out;
   }
 
-  // Kit colours reach the preview as scoped custom properties, so nothing a workspace authors
-  // can touch the app's own theme tokens — only the artifact inside .mg-email.
+  // Kit colours reach the preview as scoped custom properties, so nothing a workspace authors can
+  // touch the app's own theme tokens — only the artifact inside .mg-email.
   const kitVars = kit =>
     kit
       ? {
@@ -227,31 +240,47 @@ window.Migma = window.Migma || {};
   // The kit's accent wins for the CTA, handed to metrics.js as a settings object rather than
   // patched into the HTML afterwards.
   const kitSettings = (settings, kit) => (kit ? Object.assign({}, settings, { accent: kit.accent }) : settings);
-
+  // The locally composed artifact, used for the preview and as the export before any generation
+  // exists. `shown.body` is the plain-text reading of whichever email is on screen, so the local
+  // composer and Migma's own output describe the same copy.
   const composeHtml = (digest, shown, settings, kit) =>
     brandedHtml(
       Migma.compose.emailHtml({ digest, idea: shown.idea, body: shown.body, settings: kitSettings(settings, kit) }),
       kit
     );
 
-  // The canvas previews, exports and saves whichever variant is on screen, so every consumer
-  // reads the copy through here instead of reaching for state.body.
+  // The preview, export and copy all read the campaign through here: whichever generated email is
+  // selected, reduced to the plain fields the surfaces need. Before a generation exists there is
+  // no email, so the composer runs from the digest alone.
   function viewCopy(state) {
-    const idea = (state.ideas || []).find(i => i.id === state.ideaId) || null;
-    const variant = state.lang ? state.variants[state.lang] : null;
-    if (!variant) return { idea, body: state.body, locale: "" };
+    const emails = state.emails || [];
+    const email = emails.find(e => e.emailId === state.emailId) || emails[0] || null;
     return {
-      idea: Object.assign({}, idea, {
-        subject: variant.subject || (idea && idea.subject) || "",
-        preheader: variant.preheader || (idea && idea.preheader) || ""
-      }),
-      body: variant.body,
-      locale: state.lang
+      email,
+      idea: email ? { angle: "", subject: email.subject, preheader: email.preheader, segment: "" } : null,
+      body: email ? plainText(email.html) : "",
+      locale: email ? email.language : ""
     };
   }
 
-  const bandTone = key => (key === "high" || key === "strong" ? "ok" : key === "weak" ? "warn" : null);
+  // Copy and download hand back Migma's own html verbatim when a generation exists — that is the
+  // real deliverable — and fall back to the local composer only before one does.
+  function exportHtml(state, settings, kit) {
+    const shown = viewCopy(state);
+    if (shown.email && shown.email.html) return shown.email.html;
+    return composeHtml(state.digest, shown, settings, kit);
+  }
 
+  // Every surface for a capability Migma has not published an endpoint for renders through here, so
+  // "pending Migma API" reads the same way everywhere and never pretends to be an error.
+  const Pending = ({ title, note }) =>
+    h(U.StateView, {
+      glyph: "◴",
+      title,
+      note:
+        note ||
+        "Migma has not published an endpoint for this yet. The plugin leaves it here, inert, rather than call a route that does not exist — it lights up the moment the API ships one."
+    });
   function ConnectView({ theme, onTheme, onConnected, onForget }) {
     const saved = Migma.store.get();
     const [proxyUrl, setProxyUrl] = useState(saved.proxyUrl);
@@ -310,14 +339,13 @@ window.Migma = window.Migma || {};
       Migma.store.set({ projectId, projectName: project ? project.name : "" });
       onConnected();
     }
-
-    return h(
+      return h(
       "div",
       { className: "mg-body" },
       h(
         "header",
         null,
-        h("h2", { className: "mg-h1" }, "Connect Migma"),
+        h("h2", { className: "mg-h1" }, "Connect MigmaAI"),
         h(
           "p",
           { className: "mg-sub" },
@@ -345,13 +373,12 @@ window.Migma = window.Migma || {};
           { variant: "ghost", block: true, disabled: busy || !proxyUrl.trim(), onClick: validate },
           busy ? "Checking…" : "Check connection"
         ),
-        status &&
-          h("p", { className: cxStatus(status.kind) }, status.text),
+        status && h("p", { className: cxStatus(status.kind) }, status.text),
         h(
           U.Field,
           {
             label: "Workspace project",
-            hint: "Generated campaigns are saved here as drafts."
+            hint: "Migma generates emails against this project, and a brand import updates it."
           },
           h(U.Select, {
             value: projectId,
@@ -378,8 +405,7 @@ window.Migma = window.Migma || {};
           { className: "mg-hint" },
           "No Migma key is stored here. The plugin presents the Spotify session this client already holds and the proxy returns a short-lived, scoped one, kept in memory only."
         ),
-        onForget &&
-          h(U.Btn, { variant: "ghost", size: "sm", block: true, onClick: onForget }, "Disconnect")
+        onForget && h(U.Btn, { variant: "ghost", size: "sm", block: true, onClick: onForget }, "Disconnect")
       )
     );
   }
@@ -474,7 +500,6 @@ window.Migma = window.Migma || {};
       )
     );
   };
-
   // Step one is one surface rather than three screens: choose a playlist and the same surface fills
   // with that playlist's audience. Choosing is what starts the read, so nothing sits between picking
   // a playlist and seeing what Migma will be writing to, and the way back to the list stays on the
@@ -571,68 +596,16 @@ window.Migma = window.Migma || {};
     );
   }
 
-  // The angles sit in the same pane as the brief, so choosing one is a refinement rather than a
-  // screen of its own and the preview beside them never leaves the surface while they are read.
-  function AnglesPanel({ state, onSelect, onOwn }) {
-    if (!state.ideas)
-      return h(
-        "div",
-        { className: "mg-list" },
-        [0, 1, 2].map(i =>
-          h(
-            "div",
-            { key: i, className: "mg-idea" },
-            h(U.Skeleton, { width: "52%", height: 14 }),
-            h(U.Skeleton, { height: 40 }),
-            h(U.Skeleton, { width: "88%" })
-          )
-        ),
-        h("div", { className: "mg-progress" }, h(U.Spinner), h("span", null, "Migma is drafting angles…"))
-      );
-
-    if (!state.ideas.length)
-      return h(U.StateView, {
-        glyph: "∅",
-        title: "No angles came back",
-        note: "Migma returned an empty set for this digest. Write the brief yourself instead.",
-        action: h(U.Btn, { variant: "ghost", size: "sm", onClick: onOwn }, "Write my own brief")
-      });
-    return h(
-      "div",
-      { className: "mg-list" },
-      state.ideas.map(idea =>
-        h(
-          "button",
-          {
-            key: idea.id,
-            type: "button",
-            className: U.cx("mg-idea", idea.id === state.ideaId && "is-sel"),
-            onClick: () => onSelect(idea.id)
-          },
-          h(
-            "span",
-            { className: "mg-idea__top" },
-            h("b", null, idea.angle),
-            idea.confidence && h("i", null, String(idea.confidence).toUpperCase())
-          ),
-          idea.subject &&
-            h("span", { className: "mg-idea__subj" }, idea.subject, idea.preheader && h("s", null, idea.preheader)),
-          idea.rationale && h("p", null, idea.rationale),
-          h(
-            "span",
-            { className: "mg-idea__foot" },
-            idea.segment &&
-              h("span", { className: U.cx("mg-chip", idea.id === state.ideaId && "is-on") }, idea.segment),
-            idea.cta && h("span", { className: "mg-chip" }, `CTA · ${idea.cta}`)
-          )
-        )
-      ),
-      h("button", { type: "button", className: "mg-link", onClick: onOwn }, "None of these — write my own brief →")
-    );
-  }
-
-  function EmailPreview({ digest, shown, settings, kit, streaming }) {
-    const idea = shown.idea;
+  const normPlaylist = p => ({
+    id: p.id,
+    name: p.name || "Untitled playlist",
+    image: ((p.images || [])[0] || {}).url || "",
+    owner: (p.owner || {}).display_name || "",
+    tracks: (p.tracks || {}).total || 0,
+    followers: (p.followers || {}).total || 0
+  });
+  function EmailPreview({ digest, shown, settings, kit, generating }) {
+    const email = shown.email;
     const paras = Migma.compose.paragraphs(shown.body);
     return h(
       "div",
@@ -640,8 +613,8 @@ window.Migma = window.Migma || {};
       h(
         "div",
         { className: "mg-email__subj" },
-        h("b", null, idea && idea.subject ? idea.subject : digest.playlist.name),
-        idea && idea.preheader && h("s", null, idea.preheader)
+        h("b", null, email && email.subject ? email.subject : digest.playlist.name),
+        email && email.preheader ? h("s", null, email.preheader) : null
       ),
       h(
         "div",
@@ -649,17 +622,10 @@ window.Migma = window.Migma || {};
         settings.includeArtwork && digest.playlist.image
           ? h("img", { className: "mg-email__hero", src: digest.playlist.image, alt: "" })
           : null,
-        h("h3", null, idea && idea.angle ? idea.angle : digest.playlist.name),
+        h("h3", null, digest.playlist.name),
         paras.length
-          ? paras.map((p, i) =>
-              h(
-                "p",
-                { key: i },
-                p,
-                streaming && i === paras.length - 1 ? h("i", { className: "mg-caret" }) : null
-              )
-            )
-          : h("p", { className: "mg-email__wait" }, streaming ? h("i", { className: "mg-caret" }) : "Nothing generated yet."),
+          ? paras.map((p, i) => h("p", { key: i }, p))
+          : h("p", { className: "mg-email__wait" }, generating ? "Migma is generating…" : "Nothing generated yet."),
         settings.includeTracklist &&
           h(
             "div",
@@ -687,139 +653,12 @@ window.Migma = window.Migma || {};
       )
     );
   }
-
-  // The bar holds the two choices that belong to the artifact rather than to the brief — which
-  // brand kit paints it and which language it is read in — plus anything Migma could not do,
-  // which is reported here so a failed lookup never takes the draft down with it.
-  function CanvasBar({ state, settings, kit, onKit, onLang, onTranslate, onNotice }) {
-    const kits = state.kits || [];
-    const kitOpts = [{ value: "", label: "No brand kit" }].concat(kits.map(k => ({ value: k.id, label: k.name })));
-    // A kit saved on an earlier visit stays selectable before the list arrives, so the select
-    // never renders blank against a value it does not know yet.
-    if (settings.brandKitId && !kits.some(k => k.id === settings.brandKitId))
-      kitOpts.push({ value: settings.brandKitId, label: (kit && kit.name) || "Saved brand kit" });
-
-    const locales = [];
-    const offer = code => {
-      const v = String(code || "").trim();
-      if (v && !locales.some(x => x.toLowerCase() === v.toLowerCase())) locales.push(v);
-    };
-    // Whatever the workspace itself uses comes first; the common set follows so the selector
-    // still works for a workspace that has no kits and no default locale.
-    kits.forEach(k => (k.locales || []).forEach(offer));
-    Object.keys(state.variants).forEach(offer);
-    offer(settings.locale);
-    Object.keys(LOCALE_NAMES).forEach(offer);
-
-    const langOpts = [{ value: "", label: "Source copy" }].concat(
-      locales.map(c => ({ value: c, label: localeLabel(c) }))
-    );
-    const translated = Boolean(state.lang && state.variants[state.lang]);
-    const notice = state.notice;
-    return h(
-      "div",
-      { className: "mg-cbar" },
-      h(
-        "div",
-        { className: "mg-cbar__l" },
-        h(U.Select, {
-          value: settings.brandKitId,
-          options: kitOpts,
-          size: "sm",
-          ariaLabel: "Brand kit",
-          onChange: onKit
-        }),
-        h(U.Select, {
-          value: state.lang,
-          options: langOpts,
-          size: "sm",
-          ariaLabel: "Preview language",
-          onChange: onLang
-        }),
-        state.lang &&
-          h(
-            U.Chip,
-            {
-              tone: "ai",
-              disabled: state.translating || state.streaming || !state.body,
-              title: `Translate the generated copy into ${localeLabel(state.lang)} with Migma`,
-              onClick: onTranslate
-            },
-            state.translating ? "Translating…" : translated ? "Retranslate" : "Translate"
-          )
-      ),
-      h("span", { className: "mg-cbar__sp" }),
-      notice
-        ? h(
-            "div",
-            { className: "mg-cbar__note" },
-            h(U.Chip, { tone: notice.tone }, notice.label),
-            h("span", null, notice.text),
-            h("button", { type: "button", className: "mg-x", title: "Dismiss", onClick: () => onNotice(null) }, "×")
-          )
-        : translated
-        ? h("div", { className: "mg-cbar__note" }, "Previewing ", h("b", null, localeLabel(state.lang)))
-        : state.lang
-        ? h("div", { className: "mg-cbar__note" }, h("b", null, localeLabel(state.lang)), " not translated yet")
-        : null
-    );
-  }
-
-  // Review sits beside the brief rather than in a modal: the point of asking a teammate to look at
-  // a campaign is that the campaign stays on screen while you do it. The thread is about the copy,
-  // so it lives with the copy — who the draft is handed to is settled at the hand-off, in step three.
-  function ReviewPanel({ state, onDraft, onComment, onRetry }) {
-    const feed = state.comments;
-    return h(
-      "div",
-      null,
-      h("label", { className: "mg-lbl" }, "Team comments"),
-      state.commentsOff &&
-        h(
-          "p",
-          { className: "mg-hint mg-hint--flat" },
-          "This workspace does not expose a comment thread, so notes stay in this window."
-        ),
-      h(
-        "div",
-        { className: "mg-compose" },
-        h("textarea", {
-          className: "mg-ta mg-ta--sm",
-          value: state.commentDraft,
-          placeholder: "Leave a note for the reviewer…",
-          spellCheck: false,
-          onChange: e => onDraft(e.target.value)
-        }),
-        h(
-          U.Btn,
-          { variant: "ghost", size: "sm", block: true, disabled: !state.commentDraft.trim(), onClick: onComment },
-          "Post comment"
-        )
-      ),
-      feed === null
-        ? h("div", { className: "mg-feed" }, h(U.Skeleton, { height: 56 }), h(U.Skeleton, { height: 56 }))
-        : feed.length
-        ? h(
-            "div",
-            { className: "mg-feed" },
-            feed.map(c =>
-              h(U.Comment, {
-                key: c.id,
-                author: c.author,
-                text: c.text,
-                at: c.at,
-                state: c.state,
-                action: c.state === "failed" ? h(U.Chip, { onClick: () => onRetry(c.id) }, "Send again") : null
-              })
-            )
-          )
-        : h("p", { className: "mg-hint" }, "No comments yet.")
-    );
-  }
-
   // While a kit is active it owns the accent, so the brand-colour row shows the kit instead of a
-  // swatch: offering a colour picker the export would ignore would be a lie.
-  function BriefPanel({ state, settings, onSetting, onGenerate, onStop, briefText, onBrief, kit }) {
+  // swatch: offering a colour picker the export would ignore would be a lie. The brand itself is
+  // imported from a site through Migma's project-import route rather than picked from a list.
+  function BriefPanel(props) {
+    const { state, settings, kit, onSetting, onGenerate, onStop, briefText, onBrief, onImportBrand, onClearBrand, onToggleLang } = props;
+    const langs = settings.languages || [];
     return h(
       "div",
       null,
@@ -840,67 +679,129 @@ window.Migma = window.Migma || {};
         })
       ),
       h(
-        "div",
-        { className: "mg-optrow" },
-        "Brand colour",
+        U.Field,
+        {
+          label: "Extra languages",
+          hint: "Migma returns one email per language. Your brief's own language is always generated."
+        },
+        h(
+          "div",
+          { className: "mg-tags" },
+          GEN_LANGS.map(code =>
+            h(
+              U.Chip,
+              { key: code, on: langs.includes(code), onClick: () => onToggleLang(code) },
+              localeLabel(code)
+            )
+          )
+        )
+      ),
+      h(
+        U.Field,
+        { label: "Brand", hint: "Migma reads a site and uses its brand for the email. https only — nothing is stored but the result." },
         kit
-          ? h(U.Chip, { title: `${kit.name} sets the accent for this campaign` }, kit.name)
-          : h("input", {
-              type: "color",
-              className: "mg-swatch",
-              value: settings.accent,
-              onChange: e => onSetting({ accent: e.target.value })
-            })
+          ? h(
+              "div",
+              { className: "mg-optrow" },
+              h(U.Chip, { title: `${kit.name} sets the accent for this campaign` }, kit.name),
+              h("button", { type: "button", className: "mg-link", onClick: onClearBrand }, "Clear")
+            )
+          : h(
+              "div",
+              { className: "mg-optrow" },
+              "Brand colour",
+              h("input", {
+                type: "color",
+                className: "mg-swatch",
+                value: settings.accent,
+                onChange: e => onSetting({ accent: e.target.value })
+              })
+            ),
+        h(U.Input, {
+          value: settings.brandSite,
+          placeholder: "https://your-brand.example",
+          onChange: e => onSetting({ brandSite: e.target.value })
+        }),
+        h(
+          U.Btn,
+          {
+            variant: "ghost",
+            size: "sm",
+            block: true,
+            disabled: state.importing || !String(settings.brandSite || "").trim(),
+            onClick: () => onImportBrand(settings.brandSite)
+          },
+          state.importing ? "Importing brand…" : kit ? "Re-import brand" : "Import brand"
+        )
       ),
       h(
         "div",
         { className: "mg-optrow" },
         "Include tracklist",
-        h(U.Toggle, {
-          on: settings.includeTracklist,
-          label: "Include tracklist",
-          onChange: v => onSetting({ includeTracklist: v })
-        })
+        h(U.Toggle, { on: settings.includeTracklist, label: "Include tracklist", onChange: v => onSetting({ includeTracklist: v }) })
       ),
       h(
         "div",
         { className: "mg-optrow" },
         "Include cover art",
-        h(U.Toggle, {
-          on: settings.includeArtwork,
-          label: "Include cover art",
-          onChange: v => onSetting({ includeArtwork: v })
-        })
+        h(U.Toggle, { on: settings.includeArtwork, label: "Include cover art", onChange: v => onSetting({ includeArtwork: v }) })
       ),
       h(
         U.Field,
         { label: "Brief sent to Migma" },
-        h("textarea", {
-          className: "mg-ta",
-          value: briefText,
-          spellCheck: false,
-          onChange: e => onBrief(e.target.value)
-        })
+        h("textarea", { className: "mg-ta", value: briefText, spellCheck: false, onChange: e => onBrief(e.target.value) })
       ),
       h(
         U.Btn,
-        {
-          variant: state.streaming ? "ghost" : "accent",
-          block: true,
-          onClick: state.streaming ? onStop : onGenerate
-        },
-        state.streaming ? "Stop" : state.body ? "Regenerate" : "Generate"
+        { variant: state.generating ? "ghost" : "accent", block: true, onClick: state.generating ? onStop : onGenerate },
+        state.generating ? "Stop" : state.emails ? "Regenerate" : "Generate"
       )
     );
   }
+  // The bar holds the one choice that belongs to the artifact rather than to the brief — which
+  // returned language is on screen — plus the job's live state and anything that failed, reported
+  // here so a hiccup never takes the draft down with it.
+  function CanvasBar({ state, onEmail, onNotice }) {
+    const emails = state.emails || [];
+    const opts = emails.map((e, i) => ({
+      value: e.emailId,
+      label: e.language ? localeLabel(e.language) : emails.length > 1 ? `Email ${i + 1}` : "Generated email"
+    }));
+    const notice = state.notice;
+    return h(
+      "div",
+      { className: "mg-cbar" },
+      h(
+        "div",
+        { className: "mg-cbar__l" },
+        emails.length > 1
+          ? h(U.Select, { value: state.emailId, options: opts, size: "sm", ariaLabel: "Preview language", onChange: onEmail })
+          : null,
+        state.generating
+          ? h(U.Chip, { tone: "ai" }, state.jobState ? `Generating · ${state.jobState}` : "Generating…")
+          : null
+      ),
+      h("span", { className: "mg-cbar__sp" }),
+      notice
+        ? h(
+            "div",
+            { className: "mg-cbar__note" },
+            h(U.Chip, { tone: notice.tone }, notice.label),
+            h("span", null, notice.text),
+            h("button", { type: "button", className: "mg-x", title: "Dismiss", onClick: () => onNotice(null) }, "×")
+          )
+        : null
+    );
+  }
+
   function RefineView(props) {
     const { state, settings, kit } = props;
     const shown = viewCopy(state);
-    const count = (state.comments || []).length;
+    const pending = Migma.api.PENDING_MIGMA_API;
     return h(
       "div",
       { className: "mg-canvas" },
-      h(CanvasBar, props),
+      h(CanvasBar, { state, onEmail: props.onEmail, onNotice: props.onNotice }),
       h(
         "div",
         { className: "mg-split" },
@@ -922,8 +823,7 @@ window.Migma = window.Migma || {};
                   className: U.cx(t.value === state.tab && "is-on"),
                   onClick: () => props.onTab(t.value)
                 },
-                t.label,
-                t.value === "review" && count ? h("i", null, count) : null
+                t.label
               )
             )
           ),
@@ -931,14 +831,19 @@ window.Migma = window.Migma || {};
             "div",
             { className: "mg-brief", role: "tabpanel", "aria-labelledby": `mg-tab-${state.tab}` },
             state.tab === "angles"
-              ? h(AnglesPanel, { state, onSelect: props.onAngle, onOwn: props.onOwnBrief })
+              ? pending.ideas
+                ? h(Pending, {
+                    title: "Suggested angles",
+                    note: "Migma publishes no endpoint that proposes campaign angles from a playlist yet. Write the brief yourself in the Brief tab — that path is live."
+                  })
+                : null
               : state.tab === "review"
-              ? h(ReviewPanel, {
-                  state,
-                  onDraft: props.onDraft,
-                  onComment: props.onComment,
-                  onRetry: props.onRetry
-                })
+              ? pending.comments
+                ? h(Pending, {
+                    title: "Team review",
+                    note: "Reviewer assignment and comment threads need a workspace endpoint Migma has not published. Nothing is lost: export the HTML and review it wherever your team already works."
+                  })
+                : null
               : h(BriefPanel, {
                   state,
                   settings,
@@ -947,7 +852,10 @@ window.Migma = window.Migma || {};
                   onGenerate: props.onGenerate,
                   onStop: props.onStop,
                   briefText: props.briefText,
-                  onBrief: props.onBrief
+                  onBrief: props.onBrief,
+                  onImportBrand: props.onImportBrand,
+                  onClearBrand: props.onClearBrand,
+                  onToggleLang: props.onToggleLang
                 })
           )
         ),
@@ -957,185 +865,65 @@ window.Migma = window.Migma || {};
           h(
             "div",
             { className: "mg-pvbar" },
-            h("span", null, state.stale ? "Preview is stale" : "Live preview"),
+            h("span", null, state.stale ? "Preview is stale" : state.emails ? "Generated preview" : "Live preview"),
             h(
               "span",
               { className: "mg-pvbar__r" },
-              state.body &&
-                h(U.Chip, { onClick: () => copy(composeHtml(state.digest, shown, settings, kit)) }, "Copy HTML")
+              state.emails || shown.body
+                ? h(U.Chip, { onClick: () => copy(exportHtml(state, settings, kit)) }, "Copy HTML")
+                : null
             )
           ),
-          h(EmailPreview, { digest: state.digest, shown, settings, kit, streaming: state.streaming })
+          h(EmailPreview, { digest: state.digest, shown, settings, kit, generating: state.generating })
         )
       )
     );
   }
-
-  const normPlaylist = p => ({
-    id: p.id,
-    name: p.name || "Untitled playlist",
-    image: ((p.images || [])[0] || {}).url || "",
-    owner: (p.owner || {}).display_name || "",
-    tracks: (p.tracks || {}).total || 0,
-    followers: (p.followers || {}).total || 0
-  });
-
-  function openExternal(url) {
-    try {
-      Spicetify.Platform.OpenLinkAPI.openLink(url);
-    } catch (e) {
-      window.open(url, "_blank");
-    }
-  }
-
-  // Step three is read before it is acted on: the score, the peak window and what moved the number
-  // all sit above the save, and the reviewer the draft is handed to is chosen here rather than back
-  // in the brief, because assignment belongs to the hand-off. The card is explicit about where its
-  // number came from — Migma's own scorer when the workspace exposes one, otherwise the in-client
-  // model, which is an estimate and says so.
-  function ExportView({ state, settings, kit, onSetting }) {
-    if (state.draft) return h(SavedView, { state, settings, kit });
-
-    const s = state.score;
-    const list = state.reviewers || [];
-    const opts = [{ value: "", label: "Unassigned" }].concat(
-      list.map(r => ({ value: r.id, label: r.role ? `${r.name} · ${r.role}` : r.name }))
-    );
-    if (settings.reviewerId && !list.some(r => r.id === settings.reviewerId))
-      opts.push({ value: settings.reviewerId, label: settings.reviewerId });
-    const peak = s ? Math.max(6, ...s.factors.map(f => Math.abs(f.weight))) : 6;
-
-    return h(
-      "div",
-      { className: "mg-body mg-body--tight" },
-      s
-        ? h(
-            "div",
-            { className: "mg-score" },
-            h(
-              "div",
-              { className: "mg-score__top" },
-              h("span", { className: "mg-score__n" }, s.probability, h("s", null, "%")),
-              h(U.Chip, { tone: bandTone(s.band.key) }, `${s.band.label} conversion probability`)
-            ),
-            h(U.Meter, { value: s.probability, label: `${s.probability}% conversion probability` }),
-            h(
-              "p",
-              { className: "mg-hint" },
-              s.source === "migma"
-                ? "Scored by Migma against this workspace's own campaign history."
-                : "Estimated in this client from the playlist's signals — the workspace does not expose a scorer."
-            )
-          )
-        : h(
-            "div",
-            { className: "mg-score" },
-            h("div", { className: "mg-score__top" }, h(U.Skeleton, { width: 96, height: 34 }), h(U.Spinner)),
-            h(U.Meter, { value: 0, label: "Scoring" }),
-            h("p", { className: "mg-hint" }, "Scoring this campaign against the playlist's own signals…")
-          ),
-      s && s.window
-        ? h(
-            "div",
-            { className: "mg-win" },
-            h("span", { className: "mg-win__d" }, s.window.day || "Any day"),
-            h(
-              "div",
-              { className: "mg-win__t" },
-              h("b", null, s.window.hours || "No clear hour"),
-              h("s", null, s.window.note || "Peak listening window")
-            )
-          )
-        : null,
-      s && s.factors.length
-        ? h(
-            "div",
-            null,
-            h("label", { className: "mg-lbl" }, "What moved the score"),
-            h(
-              "div",
-              { className: "mg-facs" },
-              s.factors.map((f, i) =>
-                h(U.Factor, { key: `${f.label}-${i}`, label: f.label, weight: f.weight, note: f.note, peak })
-              )
-            )
-          )
-        : null,
-      h(
-        U.Field,
-        {
-          label: "Reviewer",
-          hint: list.length
-            ? "Saved with the draft so Migma can notify them."
-            : "Workspace reviewers appear here once Migma returns them."
-        },
-        h(U.Select, {
-          value: settings.reviewerId,
-          options: opts,
-          disabled: !list.length && !settings.reviewerId,
-          ariaLabel: "Reviewer",
-          onChange: v => onSetting({ reviewerId: v })
-        })
-      ),
-      h(
-        "div",
-        { className: "mg-body__end" },
-        s && s.confidence ? h(U.Row, { label: "Signal confidence", value: s.confidence }) : null,
-        h(
-          "p",
-          { className: "mg-hint" },
-          "A pre-flight estimate, not a guarantee. Nothing is saved or sent until you press Save."
-        )
-      )
-    );
-  }
-
-  // Once the draft exists the step becomes its receipt: what was saved, where it went, and the two
-  // exports that do not involve the workspace at all.
-  function SavedView({ state, settings, kit }) {
+  // Step three is the artifact's receipt: what was generated, where its brand came from, and the
+  // two exports that never touch the workspace. Scoring would belong here, but Migma publishes no
+  // endpoint for it, so the surface says so plainly rather than show a number it cannot stand behind.
+  function ExportView({ state, settings, kit }) {
     const shown = viewCopy(state);
-    const idea = shown.idea;
-    const html = () => composeHtml(state.digest, shown, settings, kit);
-    const reviewer = (state.reviewers || []).find(r => r.id === settings.reviewerId);
-    const extra = Object.keys(state.variants).filter(l => l !== shown.locale);
+    const email = shown.email;
+    const html = () => exportHtml(state, settings, kit);
+    const languages = (state.emails || []).map(e => e.language).filter(Boolean);
 
     return h(
       "div",
       { className: "mg-body" },
-      h(U.StateView, {
-        glyph: "✓",
-        tone: "accent",
-        title: "Draft saved to Migma",
-        note: "Review, add your list and send from Migma. Nothing has been sent yet."
-      }),
+      state.done
+        ? h(U.StateView, {
+            glyph: "✓",
+            tone: "accent",
+            title: "Campaign exported",
+            note: "The HTML is yours to send from Migma or any ESP. Nothing has been sent — the plugin holds no recipient data."
+          })
+        : null,
+      Migma.api.PENDING_MIGMA_API.score
+        ? h(Pending, {
+            title: "Deliverability scoring",
+            note: "Migma has not published a scoring endpoint, so the plugin shows no number it cannot stand behind. The generated copy is ready to export below."
+          })
+        : null,
       h(
         "div",
         null,
         h(U.Row, { label: "Project", value: settings.projectName || "—" }),
-        h(U.Row, { label: "Subject", value: idea && idea.subject ? idea.subject : state.digest.playlist.name }),
-        h(U.Row, { label: "Segment", value: (idea && idea.segment) || "Not set" }),
+        h(U.Row, { label: "Subject", value: email && email.subject ? email.subject : state.digest.playlist.name }),
         h(U.Row, { label: "Source", value: state.digest.playlist.name }),
         h(U.Row, {
           label: "Tracklist",
           value: settings.includeTracklist ? `5 of ${state.digest.trackCount} shown` : "Not included"
         }),
-        shown.locale || extra.length
-          ? h(U.Row, { label: "Language", value: shown.locale ? localeLabel(shown.locale) : "Source copy" })
-          : null,
-        extra.length ? h(U.Row, { label: "Also saved in", value: extra.map(localeLabel).join(", ") }) : null,
-        kit ? h(U.Row, { label: "Brand kit", value: kit.name }) : null,
-        settings.reviewerId
-          ? h(U.Row, { label: "Reviewer", value: reviewer ? reviewer.name : settings.reviewerId })
-          : null,
-        state.score
-          ? h(U.Row, { label: "Pre-flight", value: `${state.score.probability}% · ${state.score.band.label}` })
-          : null
+        languages.length ? h(U.Row, { label: "Languages", value: languages.map(localeLabel).join(", ") }) : null,
+        kit ? h(U.Row, { label: "Brand", value: kit.name }) : null,
+        email ? null : h(U.Row, { label: "Copy", value: "Local draft — not generated by Migma" })
       ),
       h(
         "div",
         { className: "mg-actions" },
-        state.draft && state.draft.url
-          ? h(U.Btn, { block: true, onClick: () => openExternal(state.draft.url) }, "Open in Migma ↗")
+        email && email.screenshotUrl
+          ? h(U.Btn, { block: true, onClick: () => openExternal(email.screenshotUrl) }, "Open preview image ↗")
           : null,
         h(U.Btn, { variant: "ghost", block: true, onClick: () => copy(html()) }, "Copy HTML"),
         h(U.Btn, { variant: "ghost", block: true, onClick: () => download(state.digest.playlist.name, html()) }, "Download .html")
@@ -1143,7 +931,11 @@ window.Migma = window.Migma || {};
       h(
         "div",
         { className: "mg-body__end" },
-        h("p", { className: "mg-hint" }, "Sending, list management and unsubscribe handling stay in Migma. The plugin never holds recipient data.")
+        h(
+          "p",
+          { className: "mg-hint" },
+          "Sending, list management and unsubscribe handling stay in Migma. The plugin never holds recipient data."
+        )
       )
     );
   }
@@ -1155,8 +947,7 @@ window.Migma = window.Migma || {};
     const [briefText, setBriefText] = useState("");
     const briefDirty = useRef(false);
     const abort = useRef(null);
-    const canvasAbort = useRef(null);
-    const flushTimer = useRef(null);
+    const importAbort = useRef(null);
     const retry = useRef(null);
     const mounted = useRef(true);
     const seq = useRef({});
@@ -1165,26 +956,22 @@ window.Migma = window.Migma || {};
     // the reply must be the newest one asked for on its channel. Navigating between views therefore
     // drops the answers to questions the user has moved on from rather than patching them into
     // whatever is on screen now. Passing a signal adds a third condition — that the request was not
-    // cancelled — and is used only on the workspace channels, where a cancelled read must not be
-    // reported as a capability the plan does not have.
+    // cancelled.
     const claim = (key, signal) => {
       const n = (seq.current[key] || 0) + 1;
       seq.current[key] = n;
       return () => mounted.current && seq.current[key] === n && !(signal && signal.aborted);
     };
 
-    // Any transition that abandons what a generative call was filling cancels it first, rather than
-    // leaving the client holding a stream open and decoding copy for a campaign the user has left.
-    // The coalescing timer goes with it: it outlives the request that scheduled it.
+    // Any transition that abandons a generation cancels it first, rather than leaving the client
+    // polling a job for a campaign the user has left.
     const cancelPending = () => {
       if (abort.current) abort.current.abort();
       abort.current = null;
-      if (flushTimer.current) clearTimeout(flushTimer.current);
-      flushTimer.current = null;
     };
 
-    // A new call on the generative channel replaces the one in flight, so the controller it
-    // displaces is aborted rather than abandoned.
+    // A new generation replaces the one in flight, so the controller it displaces is aborted
+    // rather than abandoned.
     const takeover = () => {
       cancelPending();
       const ctrl = new AbortController();
@@ -1194,9 +981,9 @@ window.Migma = window.Migma || {};
 
     const onSetting = useCallback(p => setSettings(Migma.store.set(p)), []);
 
-    // The chosen kit is kept in settings in its normalised form, so the preview can be painted on
-    // a later visit before the workspace list arrives — and re-normalising it here means a stored
-    // kit is validated on every read rather than trusted because it came from local storage.
+    // The imported brand is kept in settings in its normalised form, so the preview can be painted
+    // on a later visit — and re-normalising it here means a stored kit is validated on every read
+    // rather than trusted because it came from local storage.
     const activeKit = useMemo(
       () => (settings.brandKitId ? Migma.api.normKit(settings.brandKit) : null),
       [settings.brandKitId, settings.brandKit]
@@ -1213,19 +1000,14 @@ window.Migma = window.Migma || {};
 
     useEffect(() => {
       mounted.current = true;
-      // An unconnected client already stands on step one, whose surface is the connect form, so
-      // there is no separate screen to send it to — the sequence is the same one either way.
       if (Migma.store.isConnected()) bootstrap();
-      // Returned on both paths. An app that mounts straight onto the connect form still has to
-      // tear down cleanly, and the flush timer outlives the request that scheduled it.
       return () => {
         mounted.current = false;
         cancelPending();
-        if (canvasAbort.current) canvasAbort.current.abort();
+        if (importAbort.current) importAbort.current.abort();
       };
     }, []);
-
-    async function bootstrap() {
+      async function bootstrap() {
       const fresh = claim("boot");
       Migma.api
         .myPlaylists()
@@ -1254,18 +1036,14 @@ window.Migma = window.Migma || {};
         source,
         reading: true,
         digest: null,
-        ideas: null,
-        ideaId: null,
-        body: "",
-        streaming: false,
-        draft: null,
+        tab: "brief",
+        generating: false,
+        jobState: "",
+        conversationId: "",
+        emails: null,
+        emailId: "",
+        done: false,
         error: null,
-        comments: null,
-        commentsOff: false,
-        commentDraft: "",
-        variants: {},
-        lang: "",
-        score: null,
         notice: null
       });
       retry.current = () => analyse(source);
@@ -1310,413 +1088,108 @@ window.Migma = window.Migma || {};
       setProgress(null);
       patch({ source: null, digest: null, reading: false, error: null });
     }
-
-    // Angles are the first thing step two shows, so the request goes out on the way in and the pane
-    // is already filling when it lands. The brief is seeded from the angle Migma ranked first, so
-    // switching to it never finds an empty textarea.
-    async function loadIdeas() {
+      // Entering step two seeds the brief from the digest. There are no angles to choose first, so
+    // the Brief pane is where the step opens.
+    function goRefine() {
       briefDirty.current = false;
       setBriefText(Migma.compose.brief(state.digest, null, settings));
-      patch({
-        view: "refine",
-        tab: "angles",
-        ideas: null,
-        ideaId: null,
-        body: "",
-        streaming: false,
-        stale: false,
-        draft: null,
-        error: null,
-        comments: null,
-        commentsOff: false,
-        commentDraft: "",
-        variants: {},
-        lang: "",
-        score: null,
-        notice: null
-      });
-      retry.current = loadIdeas;
-      const ctrl = takeover();
-      const fresh = claim("ideas");
-      try {
-        const list = await Migma.api.ideas(state.digest, ctrl.signal);
-        if (!fresh()) return;
-        const first = list.length ? list[0] : null;
-        if (!briefDirty.current) setBriefText(Migma.compose.brief(state.digest, first, settings));
-        patch({ ideas: list, ideaId: first ? first.id : null });
-      } catch (err) {
-        const e = toError(err);
-        if (e && fresh()) patch({ error: e, ideas: [] });
-      }
+      patch({ view: "refine", tab: "brief", stale: false, error: null });
     }
 
-    // Choosing an angle stays inside step two and moves to the brief, because the brief is written
-    // from the angle — there is nothing to open. A stream still running belongs to the angle being
-    // left, so it is cancelled here rather than allowed to write copy into this one.
-    function chooseAngle(ideaId) {
-      const idea = (state.ideas || []).find(i => i.id === ideaId) || null;
-      cancelPending();
-      briefDirty.current = false;
-      setBriefText(Migma.compose.brief(state.digest, idea, settings));
-      patch({
-        tab: "brief",
-        ideaId: ideaId || null,
-        body: "",
-        streaming: false,
-        stale: false,
-        draft: null,
-        error: null,
-        comments: null,
-        commentsOff: false,
-        commentDraft: "",
-        variants: {},
-        lang: "",
-        score: null,
-        notice: null
-      });
-    }
-
-    // Reviewers and brand kits are optional capabilities: a workspace without them must not make
-    // step two look broken, so a failed lookup degrades to an empty list and is reported in the
-    // canvas bar rather than in the error view, which would discard the draft.
-    async function loadWorkspace(signal) {
-      const fresh = claim("workspace", signal);
-      const people = Migma.store.cachedWorkspace("reviewers");
-      const kits = Migma.store.cachedWorkspace("kits");
-      if (people) patch({ reviewers: people });
-      if (kits) patch({ kits });
-      if (people && kits) return;
-
-      const jobs = [];
-      if (!people)
-        jobs.push(
-          Migma.api.reviewers(signal).then(
-            list => {
-              Migma.store.cacheWorkspace("reviewers", list);
-              if (fresh()) patch({ reviewers: list });
-            },
-            () => {
-              if (!fresh()) return null;
-              patch({ reviewers: [] });
-              return "Reviewers";
-            }
-          )
-        );
-      if (!kits)
-        jobs.push(
-          Migma.api.brandKits(signal).then(
-            list => {
-              Migma.store.cacheWorkspace("kits", list);
-              if (fresh()) patch({ kits: list });
-            },
-            () => {
-              if (!fresh()) return null;
-              patch({ kits: [] });
-              return "Brand kits";
-            }
-          )
-        );
-
-      const failed = (await Promise.all(jobs)).filter(Boolean);
-      if (failed.length && fresh())
-        patch({
-          notice: {
-            tone: "warn",
-            label: "Workspace",
-            text: `${failed.join(" and ")} unavailable on this plan — everything else still works.`
-          }
-        });
-    }
-
+    // While the brief has not been hand-edited it tracks the settings, so changing tone or length
+    // rewrites it; once a generation exists, the same settings change marks the preview stale.
     useEffect(() => {
       if (state.view !== "refine" || briefDirty.current || !state.digest) return;
-      const idea = (state.ideas || []).find(i => i.id === state.ideaId) || null;
-      setBriefText(Migma.compose.brief(state.digest, idea, settings));
-      if (state.body && !state.streaming) patch({ stale: true });
+      setBriefText(Migma.compose.brief(state.digest, null, settings));
+      if (state.emails && !state.generating) patch({ stale: true });
     }, [settings.tone, settings.length, settings.ctaLabel]);
 
     useEffect(() => {
-      if (state.view === "refine" && state.body && !state.streaming) patch({ stale: true });
+      if (state.view === "refine" && state.emails && !state.generating) patch({ stale: true });
     }, [settings.includeTracklist, settings.includeArtwork, settings.accent]);
 
-    // The collaboration surfaces are fetched when step two opens rather than at start-up, so a user
-    // who only ever exports HTML never touches the workspace endpoints at all. The thread is keyed
-    // on the angle, so choosing a different one loads that angle's own notes.
-    useEffect(() => {
-      if (state.view !== "refine") return undefined;
-      const ctrl = new AbortController();
-      canvasAbort.current = ctrl;
-      loadWorkspace(ctrl.signal);
-      loadComments(ctrl.signal);
-      // Leaving step two, or switching angle, cancels the reads this visit opened instead of
-      // leaving them to resolve against a surface that is no longer on screen.
-      return () => ctrl.abort();
-    }, [state.view, state.ideaId]);
-
-    const threadOf = s => Migma.api.threadKey(s.digest ? s.digest.playlist.id : "", s.ideaId);
-    const thread = () => threadOf(state);
-
-    async function loadComments(signal) {
-      if (state.commentsOff) return;
-      const fresh = claim("comments", signal);
-      try {
-        const list = await Migma.api.comments(thread(), signal);
-        if (!fresh()) return;
-        // Anything still carrying a local state has not been accepted yet, so it survives the
-        // refresh instead of being replaced by a thread that does not contain it.
-        patch(s => ({ comments: list.concat((s.comments || []).filter(c => c.state)), commentsOff: false }));
-      } catch (err) {
-        if (fresh()) patch(s => ({ comments: s.comments || [], commentsOff: true }));
-      }
-    }
-
-    // A note joins the feed the moment it is written and keeps its text whatever the network does,
-    // so nothing typed is lost to a failed request. The author stays whoever wrote it locally
-    // rather than whatever the echo happens to contain.
-    async function post(entry) {
-      // A note is a write, so it is not one of the requests the canvas cancels: aborting it in
-      // flight would show a note the workspace may already have accepted as not sent. It is fenced
-      // on mount only, and it addresses one note by id, so a thread that has moved on does not
-      // contain it and the update is a no-op. The failure notice is held to the thread it belongs
-      // to, read from live state rather than from this closure.
-      const at = thread();
-      try {
-        const saved = await Migma.api.postComment(at, entry.text);
-        if (!mounted.current) return;
-        patch(s => ({
-          comments: (s.comments || []).map(c =>
-            c.id === entry.id
-              ? { id: saved.id || entry.id, author: entry.author, text: saved.text || entry.text, at: saved.at }
-              : c
-          )
-        }));
-      } catch (err) {
-        if (!mounted.current) return;
-        patch(s => ({
-          comments: (s.comments || []).map(c => (c.id === entry.id ? Object.assign({}, c, { state: "failed" }) : c)),
-          notice:
-            threadOf(s) === at
-              ? { tone: "err", label: "Comment", text: "Migma did not accept the note — it is still here, send it again." }
-              : s.notice
-        }));
-      }
-    }
-
-    function sendComment() {
-      const text = state.commentDraft.trim();
-      if (!text) return;
-      const entry = { id: `local-${Date.now()}`, author: "You", text, at: "", state: "pending" };
-      patch(s => ({ comments: (s.comments || []).concat([entry]), commentDraft: "" }));
-      post(entry);
-    }
-
-    function retryComment(id) {
-      const entry = (state.comments || []).find(c => c.id === id);
-      if (!entry) return;
-      patch(s => ({
-        comments: (s.comments || []).map(c => (c.id === id ? Object.assign({}, c, { state: "pending" }) : c)),
-        notice: null
-      }));
-      post(entry);
-    }
-
-    function pickKit(id) {
-      const kit = (state.kits || []).find(k => k.id === id) || null;
-      onSetting({ brandKitId: kit ? kit.id : "", brandKit: kit });
-    }
-
+    // Generation is an asynchronous job: this starts it and polls to completion, reporting the
+    // job's state through onTick so the bar can say where it is without knowing the cadence. The
+    // whole thing is fenced on identity, so a generation the user walked away from is dropped.
     async function generate() {
       const ctrl = takeover();
-      // Fenced on identity alone rather than on the signal: an aborted stream still has to clear
-      // the streaming flag and keep whatever copy arrived, and only a newer generate may overwrite
-      // the body it produced.
-      const fresh = claim("body");
+      const fresh = claim("gen");
       retry.current = generate;
-      // Translations belong to the copy that produced them, so a new body clears them rather than
-      // leaving a Spanish variant of a campaign that no longer exists.
       patch({
-        streaming: true,
-        body: "",
+        generating: true,
+        jobState: "pending",
         error: null,
         stale: false,
-        draft: null,
-        variants: {},
-        lang: "",
-        score: null,
+        done: false,
+        emails: null,
+        emailId: "",
+        conversationId: "",
         notice: null
       });
-
-      let pending = "";
-      // The coalescing timer is held in a ref so teardown can clear it: a flush scheduled by the
-      // last delta of a finished stream would otherwise fire into an unmounted tree.
-      const clearFlush = () => {
-        if (flushTimer.current) clearTimeout(flushTimer.current);
-        flushTimer.current = null;
-      };
-      const flush = () => {
-        flushTimer.current = null;
-        if (fresh()) patch({ body: pending });
-      };
-
       try {
-        const res = await Migma.api.generate(briefText, {
-          signal: ctrl.signal,
-          onDelta: (_, full) => {
-            pending = full;
-            if (!flushTimer.current) flushTimer.current = setTimeout(flush, 60);
-          }
-        });
-        clearFlush();
-        if (fresh()) patch({ streaming: false, body: res.text || pending });
-      } catch (err) {
-        clearFlush();
-        const e = toError(err);
-        if (fresh()) patch(e ? { streaming: false, body: pending, error: e } : { streaming: false, body: pending });
-      }
-    }
-    function stop() {
-      cancelPending();
-      patch({ streaming: false });
-    }
-
-    // Every translation runs from the source copy rather than from another translation, so a second
-    // language cannot inherit the drift of the first.
-    async function translate(locale) {
-      if (!locale || !state.body || state.translating) return;
-      const idea = (state.ideas || []).find(i => i.id === state.ideaId) || null;
-      const d = state.digest;
-      const src = state.body;
-      const signal = canvasAbort.current ? canvasAbort.current.signal : undefined;
-      // Fenced on identity rather than on the signal: a translation that resolved just before the
-      // canvas closed is still the translation of the copy that is on screen, so it is kept, and a
-      // cancellation is reported by the catch below instead — which is what clears the flag.
-      const fresh = claim("translate");
-      patch({ translating: true, notice: null });
-      try {
-        const out = await Migma.api.translate(
-          {
-            locale,
-            subject: idea && idea.subject ? idea.subject : d.playlist.name,
-            preheader: idea ? idea.preheader : "",
-            body: state.body
-          },
-          signal
+        const { conversationId, emails } = await Migma.api.generate(
+          { prompt: briefText, languages: settings.languages || [] },
+          { signal: ctrl.signal, onTick: s => fresh() && patch({ jobState: s }) }
         );
         if (!fresh()) return;
-        if (!out.body) {
+        if (!emails.length) {
           patch({
-            translating: false,
-            notice: { tone: "warn", label: "Translation", text: `Migma returned no copy for ${localeLabel(locale)}.` }
+            generating: false,
+            jobState: "",
+            notice: { tone: "warn", label: "Migma", text: "Generation finished but returned no email." }
           });
           return;
         }
-        // A variant is only kept if the copy it was made from is still the copy on screen: a
-        // translation that lands after Regenerate has replaced the body describes a campaign that
-        // no longer exists.
-        patch(s =>
-          s.body === src
-            ? {
-                translating: false,
-                lang: locale,
-                variants: Object.assign({}, s.variants, {
-                  [locale]: { subject: out.subject, preheader: out.preheader, body: out.body }
-                }),
-                // A paraphrased merge token means a dead link in the send, so it is named rather
-                // than silently accepted.
-                notice: out.lostTokens.length
-                  ? {
-                      tone: "warn",
-                      label: "Merge tokens",
-                      text: `${out.lostTokens.join(", ")} did not survive the translation — restore before sending.`
-                    }
-                  : null
-              }
-            : { translating: false }
-        );
+        patch({ generating: false, jobState: "", conversationId, emails, emailId: emails[0].emailId });
       } catch (err) {
-        // The flag is cleared on any outcome the app is still mounted for, cancellation included,
-        // so leaving the canvas mid-translation cannot leave Translate disabled for the session.
+        const e = toError(err);
+        if (fresh()) patch(e ? { generating: false, jobState: "", error: e } : { generating: false, jobState: "" });
+      }
+    }
+
+    function stop() {
+      cancelPending();
+      patch({ generating: false, jobState: "" });
+    }
+      // A brand import is a slow project operation (documented at 30–60 seconds), so it runs on its
+    // own controller and is fenced on mount: its result is the imported brand, stored in settings
+    // in normalised form. The inferred brand is untrusted, so normKit has already vetted it.
+    async function importBrand(url) {
+      const clean = String(url || "").trim();
+      if (!clean || state.importing) return;
+      if (importAbort.current) importAbort.current.abort();
+      const ctrl = new AbortController();
+      importAbort.current = ctrl;
+      patch({ importing: true, notice: null });
+      try {
+        const kit = await Migma.api.importBrand(clean, ctrl.signal);
+        if (!mounted.current) return;
+        if (!kit) {
+          patch({
+            importing: false,
+            notice: { tone: "warn", label: "Brand", text: "Nothing usable came back from that site." }
+          });
+          return;
+        }
+        setSettings(Migma.store.set({ brandSite: clean, brandKitId: kit.id, brandKit: kit }));
+        patch({ importing: false, notice: { tone: "ok", label: "Brand", text: `Imported ${kit.name}.` } });
+      } catch (err) {
         if (!mounted.current) return;
         const e = toError(err);
-        patch(s => ({
-          translating: false,
-          notice: e ? { tone: "err", label: "Translation", text: e.message } : s.notice
-        }));
+        patch(e ? { importing: false, notice: { tone: "err", label: "Brand", text: e.message } } : { importing: false });
       }
     }
 
-    // Step three scores the campaign on the way in, so the number, the peak window and the reviewer
-    // are all read before the save is pressed rather than after it.
-    async function preflight() {
-      const d = state.digest;
-      const shown = viewCopy(state);
-      const idea = shown.idea;
-      const ctrl = takeover();
-      const fresh = claim("score");
-      retry.current = preflight;
-      patch({ view: "export", score: null, scoring: true, error: null });
-      try {
-        const score = await Migma.api.score(
-          d,
-          {
-            subject: idea && idea.subject ? idea.subject : d.playlist.name,
-            body: shown.body,
-            segment: idea ? idea.segment : "",
-            locale: shown.locale,
-            metrics: metricsPayload(d)
-          },
-          ctrl.signal
-        );
-        if (fresh()) patch({ score, scoring: false });
-      } catch (err) {
-        if (!fresh()) return;
-        const e = toError(err);
-        patch(e ? { scoring: false, error: e } : { scoring: false });
-      }
+    function clearBrand() {
+      setSettings(Migma.store.set({ brandKitId: "", brandKit: null }));
+      if (state.emails) patch({ stale: true });
     }
 
-    async function save() {
-      const d = state.digest;
-      const shown = viewCopy(state);
-      const idea = shown.idea;
-      patch({ busy: "Saving draft…", error: null });
-      retry.current = save;
-      // The save is a write, so it is never cancelled and its result is fenced on mount only. The
-      // notification stays outside the fence: if the draft reached the workspace, that is true
-      // whether or not the panel is still open to hear it.
-      try {
-        const record = await Migma.api.saveDraft({
-          name: `${d.playlist.name} — ${idea ? idea.angle : "campaign"}`,
-          subject: idea && idea.subject ? idea.subject : d.playlist.name,
-          preheader: idea ? idea.preheader : "",
-          segment: idea ? idea.segment : "",
-          body: shown.body,
-          html: composeHtml(d, shown, settings, activeKit),
-          locale: shown.locale || settings.locale || "",
-          reviewer_id: settings.reviewerId || "",
-          brand_kit_id: activeKit ? activeKit.id : "",
-          // Whatever is on screen is saved as the campaign; every other variant travels with it so
-          // the workspace holds the same set of languages the canvas did.
-          translations: Object.keys(state.variants)
-            .filter(l => l !== shown.locale)
-            .map(l => Object.assign({ locale: l }, state.variants[l])),
-          preflight: state.score
-            ? {
-                probability: state.score.probability,
-                band: state.score.band.key,
-                source: state.score.source,
-                window: state.score.window,
-                confidence: state.score.confidence,
-                factors: state.score.factors
-              }
-            : null,
-          metrics: metricsPayload(d)
-        });
-        if (mounted.current) patch({ draft: record, busy: null });
-        Spicetify.showNotification("Draft saved to Migma");
-      } catch (err) {
-        if (mounted.current) patch({ busy: null, error: toError(err) });
-      }
+    function toggleLang(code) {
+      const cur = settings.languages || [];
+      const next = cur.includes(code) ? cur.filter(c => c !== code) : cur.concat([code]).slice(0, 12);
+      onSetting({ languages: next });
+      if (state.emails) patch({ stale: true });
     }
 
     // Starting over keeps the playlist selected but drops everything derived from it, so the picker
@@ -1728,22 +1201,17 @@ window.Migma = window.Migma || {};
       setProgress(null);
       patch({
         view: "pick",
-        tab: "angles",
+        tab: "brief",
         reading: false,
         digest: null,
-        ideas: null,
-        ideaId: null,
-        body: "",
-        streaming: false,
-        draft: null,
+        generating: false,
+        jobState: "",
+        conversationId: "",
+        emails: null,
+        emailId: "",
+        done: false,
         error: null,
         stale: false,
-        comments: null,
-        commentsOff: false,
-        commentDraft: "",
-        variants: {},
-        lang: "",
-        score: null,
         notice: null
       });
     }
@@ -1774,27 +1242,24 @@ window.Migma = window.Migma || {};
             )
       });
     }
-    const stepIndex = STEP_IDS.indexOf(state.view);
-    const selected = (state.ideas || []).find(i => i.id === state.ideaId);
+      const stepIndex = STEP_IDS.indexOf(state.view);
     const connected = Migma.store.isConnected();
 
     // Movement is backwards only: the rail offers a step already finished, never one not yet
-    // reached. Leaving a step abandons whatever it had asked for, so the request is cancelled here
-    // and the streaming flag goes with it rather than being cleared a tick later by the catch.
+    // reached. A generation or a brand import in flight, and a finished export, all close the rail
+    // to jumps — the work in flight belongs to its step, and the receipt describes copy already made.
     const stepTo = i => {
       const to = STEP_IDS[i];
-      // A write in flight is never cancelled, so there is nowhere to step to while one is running:
-      // its result belongs to the step that issued it.
-      if (!to || i >= stepIndex || state.draft || state.busy) return;
+      if (!to || i >= stepIndex || state.done || state.busy || state.generating || state.importing) return;
       cancelPending();
-      patch({ view: to, streaming: false, error: null });
+      patch({ view: to, error: null });
     };
 
     const title =
       state.view === "settings"
         ? "Settings"
         : !connected
-        ? "Migma"
+        ? "MigmaAI"
         : state.view === "pick"
         ? state.digest
           ? state.digest.playlist.name
@@ -1802,12 +1267,10 @@ window.Migma = window.Migma || {};
           ? state.source.name
           : "Pick a playlist"
         : state.view === "refine"
-        ? selected
-          ? selected.angle
-          : "Choose & refine"
-        : state.draft
+        ? "Choose & refine"
+        : state.done
         ? "Campaign ready"
-        : "Save & export";
+        : "Review & export";
 
     const subtitle =
       state.view === "settings"
@@ -1826,15 +1289,10 @@ window.Migma = window.Migma || {};
         ? state.digest
           ? state.digest.playlist.name
           : ""
-        : state.draft
-        ? "Saved as draft"
-        : state.score
-        ? state.score.source === "migma"
-          ? "Scored by Migma"
-          : "In-client estimate"
-        : "Scoring…";
-
-    let body;
+        : state.done
+        ? "Exported"
+        : "Ready to export";
+      let body;
     if (state.error && state.view !== "settings") {
       body = h(ErrorBody);
     } else if (state.view === "settings" || !connected) {
@@ -1880,47 +1338,32 @@ window.Migma = window.Migma || {};
           setBriefText(v);
         },
         onTab: v => patch({ tab: v }),
-        onAngle: chooseAngle,
-        onOwnBrief: () => chooseAngle(null),
-        onKit: pickKit,
-        onLang: v => patch({ lang: v }),
-        onTranslate: () => translate(state.lang),
+        onEmail: v => patch({ emailId: v }),
         onNotice: n => patch({ notice: n }),
-        onDraft: v => patch({ commentDraft: v }),
-        onComment: sendComment,
-        onRetry: retryComment
+        onImportBrand: importBrand,
+        onClearBrand: clearBrand,
+        onToggleLang: toggleLang
       });
     } else {
-      body = h(ExportView, { state, settings, kit: activeKit, onSetting });
+      body = h(ExportView, { state, settings, kit: activeKit });
     }
-
-    // The spectrum-bordered accent is reserved for the two actions that invoke Migma's
-    // generative side; every other forward action is the monochrome raised primary. Once angles
-    // exist, step one's forward action is a way back to them rather than a second request — a
-    // back-jump taken to re-read the audience must not cost the copy already written.
+    // The spectrum-bordered accent is reserved for the generative action; every other forward
+    // action is the monochrome raised primary. The forward action never issues a second request:
+    // once a step's work exists, moving forward only changes the surface.
     const actions = {
-      pick: state.ideas
-        ? h(U.Btn, { size: "sm", onClick: () => patch({ view: "refine", error: null }) }, "Continue")
-        : h(
-            U.Btn,
-            { variant: "accent", size: "sm", disabled: !state.digest, onClick: loadIdeas },
-            "Choose an angle"
-          ),
+      pick: h(U.Btn, { size: "sm", disabled: !state.digest, onClick: goRefine }, "Choose & refine"),
       refine: h(
         U.Btn,
-        { size: "sm", disabled: !state.body || state.streaming, onClick: preflight },
-        "Pre-flight & save"
+        { size: "sm", disabled: state.generating, onClick: () => patch({ view: "export", error: null }) },
+        "Review & export"
       ),
-      export: state.draft
+      export: state.done
         ? h(U.Btn, { variant: "ghost", size: "sm", onClick: reset }, "Create another")
-        : h(
-            U.Btn,
-            { size: "sm", disabled: state.scoring || Boolean(state.busy), onClick: save },
-            state.busy || "Save to Migma"
-          )
+        : h(U.Btn, { size: "sm", onClick: () => patch({ done: true }) }, "Finish")
     };
     const action = connected && !state.error ? actions[state.view] || null : null;
-    const chars = state.view === "refine" && state.body && !state.error ? `${state.body.length} chars` : null;
+    const chars =
+      state.view === "refine" && state.emails && !state.error ? `${(viewCopy(state).body || "").length} chars` : null;
 
     return h(
       "div",
@@ -1933,13 +1376,11 @@ window.Migma = window.Migma || {};
         h(
           "div",
           { className: "mg-head__r" },
-          state.streaming
+          state.generating
             ? h("span", { className: "mg-chip mg-chip--ai" }, "Generating…")
             : connected && state.view !== "settings"
             ? h("span", { className: "mg-chip mg-chip--ok" }, "Connected")
             : null,
-          // Nothing to open before a workspace is connected: step one is already showing the same
-          // form, so a Settings button there would lead back to where it was pressed.
           state.view === "settings"
             ? h(U.Btn, { variant: "ghost", size: "sm", onClick: closeSettings }, "Close")
             : connected
@@ -1947,15 +1388,16 @@ window.Migma = window.Migma || {};
             : null
         )
       ),
-      // The rail is the navigation model, so it sits directly under the header rather than in the
-      // footer: the three names are read on the way in, and a finished step is the way back to it.
-      // It shows before the workspace is connected too — three words are the clearest thing a first
-      // run can be told about what this does. A write in flight and a saved draft both close it to
-      // jumps: the receipt describes copy that has already left, and a write's result belongs to the
-      // step that issued it. Closing it means dropping `onJump`, so the steps render as inert text
-      // rather than as buttons the guard would silently refuse.
+      // The rail is the navigation model, so it sits directly under the header. It shows before the
+      // workspace is connected too — three words are the clearest thing a first run can be told
+      // about what this does. Closing it to jumps means dropping `onJump`, so the steps render as
+      // inert text rather than as buttons the guard would silently refuse.
       stepIndex >= 0
-        ? h(U.Rail, { steps: STEPS, index: stepIndex, onJump: state.draft || state.busy ? null : stepTo })
+        ? h(U.Rail, {
+            steps: STEPS,
+            index: stepIndex,
+            onJump: state.done || state.busy || state.generating || state.importing ? null : stepTo
+          })
         : null,
       h("main", { className: "mg-main" }, body),
       action || chars
@@ -1975,4 +1417,3 @@ window.Migma = window.Migma || {};
 function render() {
   return Spicetify.React.createElement(Migma.App, null);
 }
-

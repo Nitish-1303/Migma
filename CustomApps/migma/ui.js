@@ -216,63 +216,6 @@ Migma.ui = (() => {
   const Row = ({ label, value }) =>
     h("div", { className: "mg-kv" }, h("span", null, label), h("span", null, value));
 
-  // The score bar is the brand spectrum revealed to the width of the number, so a strong result
-  // reads as more of Migma's own gradient rather than as a different colour.
-  const Meter = ({ value, label }) =>
-    h(
-      "div",
-      { className: "mg-meter", role: "img", "aria-label": label || `${value}%` },
-      h("b", { style: { width: `${Math.max(2, Math.min(100, value))}%` } })
-    );
-
-  const Factor = ({ label, weight, note, peak = 11 }) =>
-    h(
-      "div",
-      { className: cx("mg-fac", weight < 0 && "is-down") },
-      h("em", null, label, note && h("s", null, note)),
-      h(
-        "span",
-        { className: "mg-fac__tr" },
-        h("b", { style: { width: `${Math.max(6, Math.min(100, (Math.abs(weight) / peak) * 100))}%` } })
-      ),
-      h("u", null, `${weight > 0 ? "+" : "−"}${Math.abs(weight)}`)
-    );
-
-  const initials = name => {
-    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return "?";
-    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
-  };
-
-  // Migma sends ISO timestamps; a comment that has not been accepted yet has none at all, so an
-  // unparseable value reads as "just now" rather than as "Invalid Date".
-  const when = iso => {
-    const t = Date.parse(iso || "");
-    if (!t) return "just now";
-    const mins = Math.round((Date.now() - t) / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.round(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.round(hrs / 24);
-    return days < 7 ? `${days}d ago` : new Date(t).toLocaleDateString();
-  };
-
-  const Comment = ({ author, text, at, state, action }) =>
-    h(
-      "div",
-      { className: cx("mg-cmt", state && `is-${state}`) },
-      h(
-        "div",
-        { className: "mg-cmt__top" },
-        h("i", { className: "mg-cmt__av", "aria-hidden": "true" }, initials(author)),
-        h("b", null, author),
-        h("s", null, state === "failed" ? "not sent" : state === "pending" ? "sending…" : when(at)),
-        action
-      ),
-      h("p", null, text)
-    );
-
   return {
     React,
     h,
@@ -293,12 +236,7 @@ Migma.ui = (() => {
     Skeleton,
     Rail,
     StateView,
-    Row,
-    Meter,
-    Factor,
-    Comment,
-    initials,
-    when
+    Row
   };
 })();
 

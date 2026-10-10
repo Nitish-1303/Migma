@@ -3,9 +3,7 @@ window.Migma = window.Migma || {};
 Migma.store = (() => {
   const KEY = "migma:settings";
   const CACHE_KEY = "migma:digests";
-  const WS_KEY = "migma:workspace";
   const CACHE_TTL = 30 * 60 * 1000;
-  const WS_TTL = 10 * 60 * 1000;
 
   const defaults = {
     proxyUrl: "",
@@ -19,10 +17,10 @@ Migma.store = (() => {
     accent: "#1d1e20",
     includeTracklist: true,
     includeArtwork: true,
+    brandSite: "",
     brandKitId: "",
     brandKit: null,
-    locale: "",
-    reviewerId: ""
+    languages: []
   };
 
   let settings = null;
@@ -33,10 +31,10 @@ Migma.store = (() => {
   }
 
   // Local storage is finite and shared with the client itself, so a cache write must never be the
-  // thing that fails a campaign. Every write goes through here: a full store drops the derived
-  // caches and tries once more, and a second failure is abandoned silently — the plugin then runs
-  // uncached rather than surfacing a storage error as a Migma one. Settings outrank both caches,
-  // so a settings write is the one allowed to evict them.
+  // thing that fails a campaign. Every write goes through here: a full store drops the digest
+  // cache and tries once more, and a second failure is abandoned silently — the plugin then runs
+  // uncached rather than surfacing a storage error as a Migma one. Settings outrank the cache, so
+  // a settings write is the one allowed to evict it.
   function write(key, value) {
     try {
       ls().set(key, value);
@@ -44,13 +42,19 @@ Migma.store = (() => {
     } catch (e) {
       try {
         if (key !== CACHE_KEY) ls().set(CACHE_KEY, "{}");
-        if (key !== WS_KEY) ls().set(WS_KEY, "{}");
         ls().set(key, value);
         return true;
       } catch (e2) {
         return false;
       }
     }
+  }
+
+  // `languages` is the one setting held as a list, so a store written by hand or left by an
+  // older shape would otherwise reach the request builder as something it cannot iterate.
+  function normalise(next) {
+    if (!Array.isArray(next.languages)) next.languages = [];
+    return next;
   }
 
   function get() {
@@ -61,23 +65,23 @@ Migma.store = (() => {
     } catch (e) {
       stored = {};
     }
-    settings = Object.assign({}, defaults, stored);
+    settings = normalise(Object.assign({}, defaults, stored));
     return settings;
   }
 
   function set(patch) {
-    settings = Object.assign({}, get(), patch);
+    settings = normalise(Object.assign({}, get(), patch));
     write(KEY, JSON.stringify(settings));
     listeners.forEach(fn => fn(settings));
     return settings;
   }
+
   // Appearance is a display preference, not a credential, so it survives a disconnect.
-  // Workspace resources belong to the session that fetched them, so they do not.
+  // The project, the imported brand and the copy defaults belong to the connection, so they do not.
   function forget() {
     const theme = get().theme;
-    settings = Object.assign({}, defaults, { theme });
+    settings = normalise(Object.assign({}, defaults, { theme }));
     write(KEY, JSON.stringify({ theme }));
-    write(WS_KEY, "{}");
     listeners.forEach(fn => fn(settings));
   }
 
@@ -121,33 +125,6 @@ Migma.store = (() => {
     return hit.digest;
   }
 
-  // Reviewers and brand kits are workspace-level and change rarely, so a short-lived cache
-  // keeps the canvas from refetching them on every visit. Only successful reads are written.
-  function readWorkspace() {
-    try {
-      return JSON.parse(ls().get(WS_KEY) || "{}");
-    } catch (e) {
-      return {};
-    }
-  }
-
-  // Expired entries are dropped on write as well as on read, so a key the workspace stopped
-  // exposing cannot sit in the store indefinitely just because nothing asks for it any more.
-  function cacheWorkspace(name, value) {
-    const all = readWorkspace();
-    all[name] = { at: Date.now(), value };
-    const kept = Object.entries(all)
-      .filter(([, v]) => v && Date.now() - v.at < WS_TTL)
-      .slice(-8);
-    write(WS_KEY, JSON.stringify(Object.fromEntries(kept)));
-  }
-
-  function cachedWorkspace(name) {
-    const hit = readWorkspace()[name];
-    if (!hit || Date.now() - hit.at > WS_TTL) return null;
-    return hit.value;
-  }
-
   // Set by extension.js when the user enters through the context menu or topbar,
   // consumed once by the app so a refresh does not replay the old target.
   let handoff = null;
@@ -162,8 +139,6 @@ Migma.store = (() => {
     isConnected,
     cacheDigest,
     cachedDigest,
-    cacheWorkspace,
-    cachedWorkspace,
     setHandoff: (uri, direct = true) => { handoff = uri ? { uri, direct } : null; },
     takeHandoff: () => {
       const taken = handoff;
