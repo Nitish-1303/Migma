@@ -41,7 +41,7 @@
     Spicetify.Platform.History.push("/migma");
   }
 
-  const button = new Spicetify.Topbar.Button("Migma", ICON, () => open(routeUri(), true), false);
+  const button = new Spicetify.Topbar.Button("MigmaAI", ICON, () => open(routeUri(), true), false);
   button.element.classList.add("mg-topbar");
 
   const label = document.createElement("span");
@@ -53,9 +53,11 @@
     if (uri) Migma.store.noteVisited(uri);
 
     const onPlaylist = Boolean(uri);
-    const text = onPlaylist ? "Campaign" : "Migma";
+    const text = onPlaylist ? "Campaign" : "MigmaAI";
     label.textContent = text;
-    button.label = onPlaylist ? "Create a Migma campaign from this playlist" : "Open Migma";
+    button.label = onPlaylist
+      ? "Create a MigmaAI campaign from this playlist"
+      : "Open MigmaAI";
     button.element.setAttribute("aria-label", button.label);
     button.element.classList.toggle("is-hot", onPlaylist);
   }
@@ -64,7 +66,7 @@
   Spicetify.Platform.History.listen(sync);
 
   new Spicetify.ContextMenu.Item(
-    "Create Migma campaign",
+    "Create MigmaAI campaign",
     uris => open(uris[0], true),
     uris => uris.length === 1 && isPlaylist(uris[0]),
     ICON
