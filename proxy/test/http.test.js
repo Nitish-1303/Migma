@@ -95,6 +95,38 @@ test("a known path with the wrong verb is 405 and an unknown path is 404", async
   assert.equal(unknown.status, 404);
 });
 
+// The plugin once reached for these; none is a route Migma publishes, so the proxy must expose
+// none of them. A 404 here is the contract that keeps the client honest: a feature with no real
+// endpoint has nowhere to call, so it stays a pending state in the UI instead of a fake request.
+test("the invented campaign and workspace routes do not exist on this proxy", async () => {
+  const session_ = session(PLUGIN_SCOPES);
+  const absent = [
+    "/campaigns/ideas",
+    "/v1/campaigns/ideas",
+    "/v1/campaigns/generate",
+    "/v1/campaigns/score",
+    "/v1/campaigns/translate",
+    "/v1/workspaces/reviewers",
+    "/v1/workspaces/comments",
+    "/v1/workspaces/brand-kits"
+  ];
+  for (const path of absent) {
+    for (const method of ["GET", "POST"]) {
+      const res = await fetch(`${base}${path}`, {
+        method,
+        headers: {
+          origin: ORIGIN,
+          "migma-session": session_,
+          ...(method === "POST" ? { "content-type": "application/json" } : {})
+        },
+        body: method === "POST" ? "{}" : undefined
+      });
+      assert.equal(res.status, 404, `${method} ${path} must be 404, got ${res.status}`);
+      assert.equal((await res.json()).success, false);
+    }
+  }
+});
+
 test("a body over the cap is refused before it is parsed", async () => {
   const res = await fetch(`${base}/v1/projects/emails/generate`, {
     method: "POST",
