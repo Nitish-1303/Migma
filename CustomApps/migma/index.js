@@ -1902,7 +1902,7 @@ window.Migma = window.Migma || {};
           "div",
           { className: "mg-head__r" },
           state.generating
-            ? h("span", { className: "mg-chip mg-chip--ai" }, "Generating…")
+            ? h("span", { className: "mg-chip mg-chip--ai" }, h("i", { className: "mg-genmark", "aria-hidden": "true" }), "Generating…")
             : connected && state.view !== "settings"
             ? h("span", { className: "mg-chip mg-chip--ok" }, "Connected")
             : null,

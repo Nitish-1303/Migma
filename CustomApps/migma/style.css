@@ -65,6 +65,9 @@
   --mg-sage: #a8b29b;
   --mg-sel: #f21f6299;
   --mg-sel-tx: #fff;
+  /* The animated logomark (brand gif). Used where motion is allowed; the static --mg-mark is the
+     fallback under prefers-reduced-motion and anywhere the gif cannot animate. */
+  --mg-mark-anim: url("migma-logo-animated.gif");
 
   --mg-ok: #22c55e;
   --mg-warn: #f38c05;
@@ -239,7 +242,15 @@
   flex: none;
   width: 26px;
   height: 26px;
-  background: var(--mg-mark) center/100% no-repeat;
+  background: var(--mg-mark-anim) center/100% no-repeat;
+}
+/* The animated mark that rides the header's "Generating…" chip. */
+.mg-genmark {
+  flex: none;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  background: var(--mg-mark-anim) center/contain no-repeat;
 }
 .mg-head__t { min-width: 0; }
 .mg-head__t b {
@@ -1004,5 +1015,6 @@ button.mg-rail__s:hover { color: var(--mg-tx); }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .mg-caret { opacity: 1; }
+  /* A gif cannot be frozen in CSS, so swap the animated mark for the static one. */
+  .mg-mark, .mg-genmark { background-image: var(--mg-mark); }
 }
