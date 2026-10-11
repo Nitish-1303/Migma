@@ -33,6 +33,13 @@ window.Migma = window.Migma || {};
     { value: "light", label: "White" },
     { value: "system", label: "System" }
   ];
+  // The two things a campaign can be built from. Playlist campaign is the flagship — a playlist's
+  // audience, drafted into an email. Artist announcement reframes the same pipeline as a fan email
+  // for a release, sourced from a playlist or a single track.
+  const CAMPAIGN_TYPES = [
+    { value: "playlist", label: "Playlist campaign" },
+    { value: "artist", label: "Artist announcement" }
+  ];
   // The three panes of step two. Only the brief calls a live endpoint; angles and review name
   // capabilities Migma has not published a route for, so they render a pending state in place.
   const TABS = [
@@ -105,6 +112,12 @@ window.Migma = window.Migma || {};
   const playlistId = uri => {
     const m = String(uri || "").match(/playlist[:/]([a-zA-Z0-9]+)/);
     return m ? m[1] : "";
+  };
+  const trackId = uri => {
+    const raw = String(uri || "").trim();
+    const m = raw.match(/track[:/]([a-zA-Z0-9]+)/);
+    if (m) return m[1];
+    return /^[a-zA-Z0-9]{20,24}$/.test(raw) ? raw : "";
   };
   // A handoff carries the entry point's intent: the context menu and the topbar aimed at a
   // specific playlist, so the picker is skipped. An inferred route only preselects it.
@@ -500,11 +513,13 @@ window.Migma = window.Migma || {};
       )
     );
   };
-  // Step one is one surface rather than three screens: choose a playlist and the same surface fills
-  // with that playlist's audience. Choosing is what starts the read, so nothing sits between picking
-  // a playlist and seeing what Migma will be writing to, and the way back to the list stays on the
-  // line that names what was chosen.
-  function PickView({ state, progress, query, onQuery, onPick, onChange }) {
+  // Step one is one surface rather than three screens: choose a source and the same surface fills
+  // with its audience. A campaign-type toggle sits at the top — playlist campaign or artist
+  // announcement — and in announcement mode a single track can be pasted or taken from the player,
+  // because a release is as often one track as a playlist.
+  function PickView({ state, progress, query, onQuery, onPick, onChange, campaignType, onType, onTrack, onUseCurrent }) {
+    const artist = campaignType === "artist";
+    const [trackUrl, setTrackUrl] = useState("");
     const list = useMemo(() => {
       const q = query.trim().toLowerCase();
       const items = state.playlists || [];
@@ -528,8 +543,10 @@ window.Migma = window.Migma || {};
               "s",
               null,
               state.digest
-                ? `${state.digest.trackCount} tracks · ${state.digest.artistCount} artists · ${state.digest.runtimeShort}`
-                : "Reading this playlist…"
+                ? state.digest.single
+                  ? `${state.digest.playlist.owner || "Single"} · ${state.digest.runtimeShort}`
+                  : `${state.digest.trackCount} tracks · ${state.digest.artistCount} artists · ${state.digest.runtimeShort}`
+                : "Reading this source…"
             )
           ),
           h(U.Btn, { variant: "ghost", size: "sm", onClick: onChange }, "Change")
@@ -537,28 +554,64 @@ window.Migma = window.Migma || {};
         state.digest ? h(Digest, { digest: state.digest }) : h(DigestWait, { progress })
       );
 
-    if (state.playlists && !state.playlists.length && !state.detected)
-      return h(U.StateView, {
-        glyph: "♪",
-        title: "No playlists yet",
-        note: "Create or follow a playlist, then come back to build a campaign from it.",
-        action: h(
-          U.Btn,
-          { variant: "ghost", size: "sm", onClick: () => Spicetify.Platform.History.push("/collection/playlists") },
-          "Open Your Library"
+    const submitTrack = () => {
+      const id = trackId(trackUrl);
+      if (id) onTrack(id);
+    };
+    const typeField = h(
+      U.Field,
+      { label: "Campaign type" },
+      h(U.Seg, { value: campaignType, options: CAMPAIGN_TYPES, onChange: onType })
+    );
+    const trackBlock = artist
+      ? h(
+          U.Field,
+          { label: "Or announce a single track", hint: "Paste a Spotify track link, or use the track playing now." },
+          h(U.Input, {
+            value: trackUrl,
+            placeholder: "https://open.spotify.com/track/…",
+            onChange: e => setTrackUrl(e.target.value),
+            onKeyDown: e => e.key === "Enter" && submitTrack()
+          }),
+          h(
+            "div",
+            { className: "mg-optrow" },
+            h(U.Btn, { variant: "ghost", size: "sm", disabled: !trackId(trackUrl), onClick: submitTrack }, "Use this track"),
+            h(U.Btn, { variant: "ghost", size: "sm", onClick: onUseCurrent }, "Use the playing track")
+          )
         )
-      });
+      : null;
+
+    if (state.playlists && !state.playlists.length && !state.detected && !artist)
+      return h(
+        "div",
+        { className: "mg-body" },
+        typeField,
+        h(U.StateView, {
+          glyph: "♪",
+          title: "No playlists yet",
+          note: "Create or follow a playlist, then come back to build a campaign from it.",
+          action: h(
+            U.Btn,
+            { variant: "ghost", size: "sm", onClick: () => Spicetify.Platform.History.push("/collection/playlists") },
+            "Open Your Library"
+          )
+        })
+      );
     return h(
       "div",
       { className: "mg-body" },
+      typeField,
       h(
         "header",
         null,
-        h("h2", { className: "mg-h2" }, "Pick a playlist"),
+        h("h2", { className: "mg-h2" }, artist ? "Choose a release" : "Pick a playlist"),
         h(
           "p",
           { className: "mg-sub" },
-          "A campaign is built from one playlist. Choosing it reads its audience straight away."
+          artist
+            ? "Announce a release to your fans. Pick a playlist, or paste a single track below."
+            : "A campaign is built from one playlist. Choosing it reads its audience straight away."
         )
       ),
       state.detected &&
@@ -592,7 +645,8 @@ window.Migma = window.Migma || {};
                 })
               )
         )
-      )
+      ),
+      trackBlock
     );
   }
 
@@ -1088,6 +1142,71 @@ window.Migma = window.Migma || {};
       setProgress(null);
       patch({ source: null, digest: null, reading: false, error: null });
     }
+
+    const toTrackSource = d => ({
+      id: d.playlist.id,
+      name: d.playlist.name,
+      image: d.playlist.image,
+      owner: d.playlist.owner,
+      tracks: 1,
+      followers: 0
+    });
+
+    // Artist announcements can be sourced from a single track, which is read on the same digest
+    // channel as a playlist so the newest source wins and the rest of the flow is identical.
+    async function analyseTrack(id) {
+      cancelPending();
+      patch({
+        view: "pick",
+        source: { id, name: "Track", image: "", owner: "", tracks: 1, followers: 0 },
+        reading: true,
+        digest: null,
+        tab: "brief",
+        generating: false,
+        jobState: "",
+        conversationId: "",
+        emails: null,
+        emailId: "",
+        done: false,
+        error: null,
+        notice: null
+      });
+      retry.current = () => analyseTrack(id);
+      const fresh = claim("digest");
+      const key = `track:${id}`;
+      const cached = Migma.store.cachedDigest(key);
+      if (cached) {
+        patch({ digest: cached, source: toTrackSource(cached), reading: false });
+        return;
+      }
+      try {
+        const t = await Migma.api.track(id);
+        const index = new Map(
+          (await Migma.api.artists((t.artists || []).map(a => a.id))).map(a => [a.id, a])
+        );
+        const digest = Migma.metrics.trackDigest(t, index);
+        Migma.store.cacheDigest(key, digest);
+        if (fresh()) patch({ digest, source: toTrackSource(digest) });
+      } catch (err) {
+        if (fresh()) patch({ error: toError(err) });
+      } finally {
+        if (fresh()) patch({ reading: false });
+      }
+    }
+
+    function useCurrentTrack() {
+      let id = "";
+      try {
+        id = trackId(((Spicetify.Player.data || {}).item || {}).uri || "");
+      } catch (e) {
+        id = "";
+      }
+      if (!id) {
+        Spicetify.showNotification("No track is playing to announce");
+        return;
+      }
+      analyseTrack(id);
+    }
       // Entering step two seeds the brief from the digest. There are no angles to choose first, so
     // the Brief pane is where the step opens.
     function goRefine() {
@@ -1102,7 +1221,7 @@ window.Migma = window.Migma || {};
       if (state.view !== "refine" || briefDirty.current || !state.digest) return;
       setBriefText(Migma.compose.brief(state.digest, null, settings));
       if (state.emails && !state.generating) patch({ stale: true });
-    }, [settings.tone, settings.length, settings.ctaLabel]);
+    }, [settings.tone, settings.length, settings.ctaLabel, settings.campaignType]);
 
     useEffect(() => {
       if (state.view === "refine" && state.emails && !state.generating) patch({ stale: true });
@@ -1281,7 +1400,9 @@ window.Migma = window.Migma || {};
         ? "Connect a workspace to begin"
         : state.view === "pick"
         ? state.digest
-          ? `${state.digest.trackCount} tracks · ${state.digest.artistCount} artists`
+          ? state.digest.single
+            ? `Single · ${state.digest.playlist.owner || "release"}`
+            : `${state.digest.trackCount} tracks · ${state.digest.artistCount} artists`
           : state.reading
           ? "Reading the audience…"
           : settings.projectName
@@ -1320,8 +1441,12 @@ window.Migma = window.Migma || {};
         state,
         progress,
         query: state.query,
+        campaignType: settings.campaignType,
+        onType: v => onSetting({ campaignType: v }),
         onQuery: q => patch({ query: q }),
         onPick: p => analyse(p),
+        onTrack: analyseTrack,
+        onUseCurrent: useCurrentTrack,
         onChange: changePlaylist
       });
     } else if (state.view === "refine") {

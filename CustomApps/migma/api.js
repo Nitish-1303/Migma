@@ -101,6 +101,13 @@ Migma.api = (() => {
     return (res.items || []).filter(p => p && p.id);
   }
 
+  // A single track, for the artist-announcement source. Read-only through the client's own
+  // session, like every other Spotify call here; the artist's genres come from a follow-up
+  // artists() lookup since the track payload does not carry them.
+  function track(id) {
+    return sp(`/tracks/${id}`);
+  }
+
   const CLIENT = "spicetify-migma";
 
   // The proxy holds the workspace key and signs with it, so nothing in this client ever handles one.
@@ -504,6 +511,7 @@ Migma.api = (() => {
     playlistTracks,
     artists,
     myPlaylists,
+    track,
     projects,
     generate,
     pollEmails,

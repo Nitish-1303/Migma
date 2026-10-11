@@ -120,7 +120,64 @@ Migma.metrics = (() => {
     };
   }
 
-  return { digest, clock };
+  // A single track, reduced to the same shape digest() returns so every downstream surface —
+  // preview, brief, export — reads it without a special case. It stands in as a one-track
+  // "playlist" whose owner is the primary artist, which is exactly how an artist announcement
+  // frames a new release.
+  function trackDigest(track, artistIndex) {
+    const genreSet = new Set();
+    for (const a of track.artists || []) {
+      const meta = artistIndex.get(a.id);
+      if (meta) (meta.genres || []).forEach(g => genreSet.add(g));
+    }
+    const size = genreSet.size || 1;
+    const genres = [...genreSet].slice(0, 6).map(name => ({ name, share: Math.round(100 / size) }));
+
+    const year = Number(String((track.album && track.album.release_date) || "").slice(0, 4));
+    const decade = year ? Math.floor(year / 10) * 10 : 0;
+    const eras = year
+      ? [{ label: decade >= 2000 ? `${decade}s` : `${String(decade).slice(2)}s`, share: 100 }]
+      : [];
+
+    const runtime = runtimeParts(track.duration_ms || 0);
+    const primary = ((track.artists || [])[0] || {}).name || "";
+    const tags = [];
+    if (year && new Date().getFullYear() - year <= 1) tags.push("fresh-release");
+
+    return {
+      playlist: {
+        id: track.id,
+        name: track.name,
+        description: "",
+        owner: primary,
+        followers: 0,
+        image: ((((track.album || {}).images) || [])[0] || {}).url || ""
+      },
+      trackCount: 1,
+      artistCount: (track.artists || []).length,
+      avgPopularity: track.popularity || 0,
+      explicitShare: track.explicit ? 100 : 0,
+      runtimeShort: runtime.short,
+      runtimeLong: runtime.long,
+      genres,
+      eras,
+      topArtists: (track.artists || [])
+        .slice(0, 5)
+        .map(a => ({ name: (artistIndex.get(a.id) || {}).name || a.name || "Unknown", tracks: 1 })),
+      tags,
+      tracks: [
+        {
+          name: track.name,
+          artist: primary,
+          duration: clock(track.duration_ms || 0),
+          image: ((((track.album || {}).images) || [])[2] || (((track.album || {}).images) || [])[0] || {}).url || ""
+        }
+      ],
+      single: true
+    };
+  }
+
+  return { digest, trackDigest, clock };
 })();
 
 Migma.compose = (() => {
@@ -128,6 +185,25 @@ Migma.compose = (() => {
 
   function brief(digest, idea, settings) {
     const d = digest;
+    // Artist announcement: a fan-release email in the artist's own voice, built from either a
+    // single track or a release playlist. Same digest shape, different framing.
+    if (settings.campaignType === "artist") {
+      const artist = (d.topArtists[0] && d.topArtists[0].name) || d.playlist.owner || "the artist";
+      const release = d.single ? `the new track "${d.playlist.name}"` : `the release "${d.playlist.name}"`;
+      const lines = [
+        `Write a ${settings.tone}, ${LENGTHS[settings.length] || LENGTHS.standard} fan announcement email from ${artist} about ${release}.`,
+        d.single
+          ? `Track: "${d.playlist.name}" by ${artist}${d.eras.length ? `, released ${d.eras[0].label}` : ""}, ${d.runtimeLong}.`
+          : `Release: ${d.trackCount} tracks, ${d.runtimeLong}, average popularity ${d.avgPopularity}/100.`,
+        d.genres.length ? `Sound: ${d.genres.slice(0, 4).map(g => g.name).join(", ")}.` : "",
+        d.tags.includes("fresh-release") ? "This is a brand-new release — lead with that." : "",
+        "Write to existing fans in the artist's own voice; invite them to listen and share, warmly and without hype.",
+        `Call to action: "${settings.ctaLabel}".`,
+        "Do not invent song, album or artist names beyond what is given."
+      ];
+      return lines.filter(Boolean).join("\n");
+    }
+
     const lines = [
       `Write a ${settings.tone}, ${LENGTHS[settings.length] || LENGTHS.standard} campaign email for the Spotify playlist "${d.playlist.name}".`,
       `Playlist: ${d.trackCount} tracks, ${d.artistCount} artists, ${d.runtimeLong}, average popularity ${d.avgPopularity}/100.`,

@@ -10,6 +10,7 @@ Migma.store = (() => {
     projectId: "",
     projectName: "",
     theme: "system",
+    campaignType: "playlist",
     tone: "direct",
     length: "standard",
     ctaLabel: "Listen now",
