@@ -7,6 +7,9 @@ that plugin, designed and running.
 
 [Watch the demo - 1 min, with narration](VID-20261011-WA0004.mp4)
 
+https://github.com/user-attachments/assets/397a3595-c337-4a8a-a199-8e2f12e1830e
+
+
 
 ## Why Migma should care
 
