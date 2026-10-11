@@ -1,16 +1,3 @@
-/**
- * Email generation, as an asynchronous job.
- *
- * Migma publishes no streaming endpoint for this: generate starts a job and
- * answers { conversationId, status: "pending" }, and the caller polls the status
- * route until it reads "completed", at which point data.result.emails[] carries
- * { emailId, subject, html, screenshotUrl } per language.
- *
- * No polling interval is published. This proxy therefore sets none -- it reports
- * upstream's status verbatim and lets the client pace itself, because inventing a
- * cadence here would hide the fact that nobody has committed to one.
- */
-
 import { SCOPES } from "../lib/session.js";
 import {
   MAX_PROMPT,
@@ -19,8 +6,7 @@ import {
   requireString
 } from "../lib/guard.js";
 
-// Constrains the path parameter at the router, so a value that could traverse into
-// another upstream path never reaches a handler or a URL.
+// Constrains the path parameter at the router, so a value that could traverse into another upstream path never reaches a handler or a URL.
 const CONVERSATION_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 export function registerEmailRoutes(router) {

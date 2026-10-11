@@ -1,8 +1,3 @@
-/**
- * The session exchange. These are the tests that matter most: a forgeable session
- * would let any caller spend the workspace's Migma quota.
- */
-
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHmac } from "node:crypto";
@@ -10,7 +5,7 @@ import { PLUGIN_SCOPES, SCOPES, holds, mint, verify } from "../lib/session.js";
 
 const SECRET = "0".repeat(64);
 
-test("a minted session verifies and carries its subject", () => {
+test("mint then verify carries the subject", () => {
   const minted = mint({ subject: "listener-1", ttlSeconds: 900, secret: SECRET });
   const result = verify(minted.token, SECRET);
   assert.equal(result.ok, true);
@@ -19,12 +14,12 @@ test("a minted session verifies and carries its subject", () => {
   assert.match(minted.token, /^ms1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
 });
 
-test("a session signed by another secret is refused", () => {
+test("wrong secret refused", () => {
   const minted = mint({ subject: "listener-1", ttlSeconds: 900, secret: SECRET });
   assert.deepEqual(verify(minted.token, "1".repeat(64)), { ok: false, reason: "signature" });
 });
 
-test("editing the claims invalidates the signature", () => {
+test("tampered claims fail the signature", () => {
   const minted = mint({ subject: "listener-1", ttlSeconds: 900, secret: SECRET });
   const [version, payload, signature] = minted.token.split(".");
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
@@ -33,7 +28,7 @@ test("editing the claims invalidates the signature", () => {
   assert.equal(verify(`${version}.${forged}.${signature}`, SECRET).reason, "signature");
 });
 
-test("shapes that are not sessions are told apart from bad signatures", () => {
+test("non-session shapes told apart from bad signatures", () => {
   assert.equal(verify(undefined, SECRET).reason, "missing");
   assert.equal(verify("", SECRET).reason, "missing");
   assert.equal(verify("not-a-token", SECRET).reason, "malformed");
@@ -41,7 +36,7 @@ test("shapes that are not sessions are told apart from bad signatures", () => {
   assert.equal(verify("ms1.a.b", SECRET).reason, "signature");
 });
 
-test("an elapsed session reports expiry rather than a bad signature", () => {
+test("expired reads as expired, not a bad signature", () => {
   const minted = mint({ subject: "listener-1", ttlSeconds: 60, secret: SECRET });
   const [version, payload] = minted.token.split(".");
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
@@ -55,7 +50,7 @@ test("an elapsed session reports expiry rather than a bad signature", () => {
   assert.equal(verify(`${version}.${forged}.${signature}`, SECRET).reason, "expired");
 });
 
-test("the granted scope set covers the plugin and nothing beyond it", () => {
+test("plugin scope set, nothing beyond", () => {
   const { claims } = verify(mint({ subject: "s", ttlSeconds: 60, secret: SECRET }).token, SECRET);
   for (const scope of Object.values(SCOPES)) assert.equal(holds(claims, scope), true);
   assert.equal(holds(claims, "email:send"), false);

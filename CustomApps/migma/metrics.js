@@ -48,8 +48,7 @@ Migma.metrics = (() => {
         if (thisYear - year <= 1) recent++;
         if (year < 2010) throwback++;
       }
-      // Genres are counted once per track, not once per artist, so a prolific
-      // contributor cannot skew the mix.
+      // Genres are counted once per track, not once per artist, so a prolific contributor cannot skew the mix.
       const trackGenres = new Set();
       for (const a of t.artists || []) {
         if (!a.id) continue;
@@ -122,10 +121,7 @@ Migma.metrics = (() => {
     };
   }
 
-  // A single track, reduced to the same shape digest() returns so every downstream surface —
-  // preview, brief, export — reads it without a special case. It stands in as a one-track
-  // "playlist" whose owner is the primary artist, which is exactly how an artist announcement
-  // frames a new release.
+  // A single track, reduced to the same shape digest() returns so every downstream surface, preview, brief, export, reads it without a special case.
   function trackDigest(track, artistIndex) {
     const genreSet = new Set();
     for (const a of track.artists || []) {
@@ -181,8 +177,7 @@ Migma.metrics = (() => {
     };
   }
 
-  // Album objects → the releases within the last `days`, newest first, de-duplicated. Spotify
-  // dates come as YYYY, YYYY-MM or YYYY-MM-DD, so each is normalised before the window is applied.
+  // Album objects → the releases within the last `days`, newest first, de-duplicated.
   function releaseTime(rd) {
     const s = String(rd || "");
     const iso = s.length === 4 ? `${s}-01-01` : s.length === 7 ? `${s}-01` : s;
@@ -213,14 +208,13 @@ Migma.metrics = (() => {
     }
     return out.sort((x, y) => (y.date || "").localeCompare(x.date || ""));
   }
-  // The single newest release regardless of age — what the watch compares against last time.
+  // The single newest release regardless of age, what the watch compares against last time.
   function latestRelease(albums) {
     const mapped = (albums || []).map(mapAlbum).filter(x => x.id);
     mapped.sort((x, y) => releaseTime(y.date) - releaseTime(x.date));
     return mapped[0] || null;
   }
-  // A new release is a latest whose id differs from the one last seen — and only once a baseline
-  // exists, so the first poll of a watch does not fire a banner for an already-published release.
+  // A new release is a latest whose id differs from the one last seen, and only once a baseline exists, so the first poll of a watch does not fire a banner for an already-published release.
   function isNewRelease(latest, seen) {
     return Boolean(latest && latest.id && seen && latest.id !== seen);
   }
@@ -231,15 +225,13 @@ Migma.metrics = (() => {
 Migma.compose = (() => {
   const LENGTHS = { short: "roughly 90 words", standard: "roughly 180 words", long: "roughly 320 words" };
 
-  // `context` carries the type-specific inputs a brief needs beyond the digest: a pitch target, a
-  // date list, a release list. The playlist and artist briefs ignore it.
+  // `context` carries the type-specific inputs a brief needs beyond the digest.
   function brief(digest, idea, settings, context) {
     const d = digest;
     const ctx = context || {};
     const len = LENGTHS[settings.length] || LENGTHS.standard;
 
-    // Artist announcement: a fan-release email in the artist's own voice, built from either a
-    // single track or a release playlist. Same digest shape, different framing.
+    // Artist announcement.
     if (settings.campaignType === "artist_announce") {
       const artist = (d.topArtists[0] && d.topArtists[0].name) || d.playlist.owner || "the artist";
       const release = d.single ? `the new track "${d.playlist.name}"` : `the release "${d.playlist.name}"`;
@@ -256,8 +248,7 @@ Migma.compose = (() => {
       ].filter(Boolean).join("\n");
     }
 
-    // Playlist pitch: a professional note from the artist to a curator, not a fan email. It names
-    // the track, why it fits the target, and references the target's own tracks.
+    // Playlist pitch.
     if (settings.campaignType === "playlist_pitch") {
       const t = ctx.target || {};
       const artist = (d.topArtists[0] && d.topArtists[0].name) || d.playlist.owner || "the artist";
@@ -347,10 +338,7 @@ Migma.compose = (() => {
       )
       .join("");
 
-    // Email clients routinely block <audio>, so a 30-second preview is surfaced as a thumbnail that
-    // links out: to Spotify's preview mp3 when the track has one, otherwise to the track on
-    // open.spotify.com. A track with neither keeps a plain thumbnail — never a play button over a
-    // dead link.
+    // Email clients routinely block <audio>, so a 30-second preview is surfaced as a thumbnail that links out.
     const artCell = t => {
       const img = `<img src="${esc(t.image)}" width="36" height="36" alt="" style="display:block;border-radius:4px">`;
       const href = t.preview || t.url;

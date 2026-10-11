@@ -1,11 +1,3 @@
-/**
- * Line-delimited JSON logging with redaction applied on the way out.
- *
- * A proxy whose whole purpose is holding a secret must not be the thing that
- * prints it, so redaction runs over the serialised line rather than over fields
- * chosen by hand: a key that reaches a log by an unexpected path is still caught.
- */
-
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 
 const PATTERNS = [

@@ -1,16 +1,4 @@
-/**
- * CORS, stated explicitly rather than delegated.
- *
- * The allowed origin is echoed exactly, never `*`, because the allowlist is the
- * access control on this service's client-facing side. Credentials are not
- * allowed: the session travels in the Migma-Session header, so no cookie needs
- * to ride along, and refusing them removes a whole class of mistake.
- */
-
-// Migma-Session carries the minted session. X-Migma-Client is sent on every
-// request by the plugin, so omitting it fails the preflight and blocks the call
-// before it is made. Authorization is here for POST /session, which presents the
-// Spotify token that way. Content-Type is not CORS-safelisted at application/json.
+// Migma-Session carries the minted session.
 const ALLOWED_HEADERS = [
   "Content-Type",
   "Authorization",

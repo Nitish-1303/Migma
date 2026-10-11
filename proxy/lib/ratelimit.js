@@ -1,15 +1,3 @@
-/**
- * Token bucket, per key, in memory.
- *
- * This limit protects the workspace's own upstream quota -- Standard is 500/min
- * and 10,000/day across the whole account -- so a client stuck in a retry loop
- * cannot spend the day's allowance in an afternoon.
- *
- * State is per instance. Two replicas therefore allow twice the configured rate;
- * a deployment that needs an exact ceiling wants a shared counter instead, and
- * the README says so rather than leaving it to be discovered.
- */
-
 export function createRateLimiter({ perMinute, burst = perMinute, sweepMs = 60000 }) {
   const buckets = new Map();
   const refillPerMs = perMinute / 60000;

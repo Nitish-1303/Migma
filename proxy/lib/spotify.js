@@ -1,17 +1,6 @@
-/**
- * Spotify session validation.
- *
- * The plugin does not ask for a scope and does not start an OAuth flow: it hands
- * over the token the desktop client is already using for its own reads, and this
- * is the check that the token is real and whose it is. GET /v1/me needs no scope,
- * which is why it is the right probe -- a 200 means Spotify authenticated the
- * caller, and the id in the reply is the subject of the session that follows.
- */
-
 const ME = "https://api.spotify.com/v1/me";
 
-// Spotify access tokens are long and opaque. A value outside these bounds cannot
-// be one, so it is refused without spending an upstream call on it.
+// Spotify access tokens are long and opaque.
 const PLAUSIBLE = /^[A-Za-z0-9._~+/=-]{40,4096}$/;
 
 export function createSpotifyValidator({ timeoutMs, logger }) {
@@ -63,8 +52,7 @@ export function createSpotifyValidator({ timeoutMs, logger }) {
       return { ok: false, status: 502, error: "Spotify returned a profile without an id" };
     }
 
-    // Only the id is kept. Display name, email and images are not this proxy's
-    // business and would turn a log line into personal data.
+    // Only the id is kept.
     return {
       ok: true,
       user: {

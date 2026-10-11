@@ -1,9 +1,3 @@
-/**
- * Wire format. Both directions speak Migma's envelope, so the client parses one
- * shape whether a reply came from Migma, from this proxy, or from a rejection
- * that never reached the network.
- */
-
 import { randomUUID } from "node:crypto";
 
 export const newRequestId = () => randomUUID();

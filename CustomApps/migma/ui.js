@@ -5,9 +5,7 @@ Migma.ui = (() => {
   const h = React.createElement;
   const cx = (...p) => p.filter(Boolean).join(" ");
 
-  // "dark" and "light" are honoured verbatim; "system" resolves against the OS colour
-  // scheme and re-resolves whenever it changes. Only the resolved value reaches the DOM,
-  // so the stylesheet never has to know about the third option.
+  // "dark" and "light" are honoured verbatim;
   const LIGHT_QUERY = "(prefers-color-scheme: light)";
 
   const prefersLight = () => {
@@ -161,9 +159,7 @@ Migma.ui = (() => {
   const Skeleton = ({ width, height }) =>
     h("div", { className: "mg-sk", style: { width: width || "100%", height: height || 11 } });
 
-  // One continuous rail rather than a row of boxes: the fill is the progress, the three names sit
-  // under it so the distance left to travel is legible without counting anything, and a step
-  // already behind you is a button back to it.
+  // One continuous rail rather than a row of boxes.
   const Rail = ({ steps, index, onJump }) =>
     h(
       "div",

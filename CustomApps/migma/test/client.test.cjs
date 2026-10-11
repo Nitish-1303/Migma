@@ -1,6 +1,5 @@
-// Client integration tests. The plugin's scripts are browser IIFEs, so they load here under
-// minimal Spicetify/fetch stubs and are exercised the way the app drives them. No network, no key.
-// Run: node --test CustomApps/migma/test/
+// Client integration tests: load the browser IIFEs under stubs, no network, no key.
+// Run: node --test CustomApps/migma/test/client.test.cjs
 "use strict";
 const fs = require("node:fs");
 const path = require("node:path");
@@ -73,7 +72,7 @@ M.store.set({ proxyUrl: "https://proxy.example", projectId: "proj1" });
 
 test.after(() => { global.setTimeout = realSetTimeout; });
 
-test("ENDPOINTS names only routes the proxy serves", () => {
+test("endpoints are real routes only", () => {
   const e = M.api.ENDPOINTS;
   assert.equal(e.projects, "/v1/projects");
   assert.equal(e.import, "/v1/projects/import");
@@ -87,7 +86,7 @@ test("ENDPOINTS names only routes the proxy serves", () => {
   }
 });
 
-test("PENDING_MIGMA_API names the capabilities with no endpoint", () => {
+test("pending flag keys", () => {
   assert.deepEqual(
     Object.keys(M.api.PENDING_MIGMA_API).sort(),
     ["comments", "ideas", "reviewers", "score", "translate"]
@@ -106,19 +105,19 @@ test("generate runs as an async job and polls to completion", async () => {
   assert.ok(seen.some(s => s.startsWith("GET /v1/projects/emails/c1/status")));
 });
 
-test("importBrand normalises the inferred brand through normKit", async () => {
+test("importBrand goes through normKit", async () => {
   const kit = await M.api.importBrand("https://acme.example");
   assert.equal(kit.id, "acme");
   assert.equal(kit.accent, "#2b50aa");
 });
 
-test("normKit rejects junk and keeps the email readable", () => {
+test("normKit rejects junk, keeps ink readable", () => {
   assert.equal(M.api.normKit({ foo: 1 }), null);
   const k = M.api.normKit({ id: "x", paper: "#000000", ink: "#111111" });
   assert.equal(k.ink, "#ffffff");
 });
 
-test("artist mode frames a fan announcement brief", () => {
+test("artist brief is a fan announcement", () => {
   const trackDigest = M.metrics.trackDigest(
     {
       id: "t1",
@@ -143,12 +142,12 @@ test("artist mode frames a fan announcement brief", () => {
   assert.match(brief, /brand-new release/i);
 });
 
-test("store defaults carry the campaign type and source kind", () => {
+test("store defaults: type and source kind", () => {
   assert.equal(M.store.defaults.campaignType, "playlist");
   assert.equal(M.store.defaults.sourceKind, "playlist");
 });
 
-test("a track uri survives the handoff mechanism and is consumed once", () => {
+test("track handoff consumed once", () => {
   M.store.setHandoff("spotify:track:4iV5W9uYEdYUVa79Axb7Rh", true);
   const h = M.store.takeHandoff();
   assert.equal(h.uri, "spotify:track:4iV5W9uYEdYUVa79Axb7Rh");
@@ -156,7 +155,7 @@ test("a track uri survives the handoff mechanism and is consumed once", () => {
   assert.equal(M.store.takeHandoff(), null);
 });
 
-test("playlist mode brief stays a campaign brief", () => {
+test("playlist brief stays a campaign", () => {
   const digest = {
     playlist: { id: "pl", name: "Mix", owner: "DJ", followers: 10, image: "" },
     trackCount: 20, artistCount: 15, avgPopularity: 55, runtimeLong: "1 hr",
@@ -177,7 +176,7 @@ test("the local composer produces standalone html carrying the merge token", () 
   assert.ok(html.includes("{{unsubscribe_url}}"));
 });
 
-test("the app loaded and exposed its entry points", () => {
+test("app and render exposed", () => {
   assert.equal(typeof M.App, "function");
   assert.equal(typeof render, "function");
 });
@@ -186,7 +185,7 @@ test("no external font or brand-asset URLs are referenced from the plugin", () =
   const sources = ["style.css", "store.js", "api.js", "metrics.js", "ui.js", "index.js", "extension.js"];
   for (const f of sources) {
     const text = fs.readFileSync(path.join(dir, f), "utf8");
-    // The brand host must never be fetched at runtime — fonts and the logo are bundled locally.
+    // The brand host must never be fetched at runtime, fonts and the logo are bundled locally.
     assert.ok(!/migma\.ai/.test(text), `${f} must not reference migma.ai`);
   }
   // No stylesheet url() may point off-box: fonts and the mark are local files or data URIs.
@@ -199,7 +198,7 @@ test("no external font or brand-asset URLs are referenced from the plugin", () =
   }
 });
 
-test("pitch brief names the track, the target playlist and its tracks", () => {
+test("pitch brief names track, target, its tracks", () => {
   const td = M.metrics.trackDigest(
     { id: "t2", name: "Glass Harbor", duration_ms: 200000, popularity: 30, explicit: false, album: { release_date: "2026-02-01", images: [{ url: "x" }] }, artists: [{ id: "a2", name: "Veil" }] },
     new Map([["a2", { name: "Veil", genres: ["dream pop"] }]])
@@ -211,7 +210,7 @@ test("pitch brief names the track, the target playlist and its tracks", () => {
   assert.doesNotMatch(brief, /fan announcement/i);
 });
 
-test("show brief lists every date and its ticket link", () => {
+test("show brief lists dates and tickets", () => {
   const digest = { playlist: { owner: "" }, topArtists: [] };
   const dates = [
     { city: "Berlin", venue: "Berghain", date: "2026-11-02", ticket: "https://tix.example/berlin" },
@@ -225,7 +224,7 @@ test("show brief lists every date and its ticket link", () => {
   }
 });
 
-test("recentReleases keeps the last 7 days and drops older", () => {
+test("recentReleases 7-day window", () => {
   const day = 86400000;
   const iso = ms => new Date(ms).toISOString().slice(0, 10);
   const albums = [
@@ -237,7 +236,7 @@ test("recentReleases keeps the last 7 days and drops older", () => {
   assert.equal(rel[0].id, "r1");
 });
 
-test("label brief lists the given releases, and an empty roster is honest", () => {
+test("label brief lists releases, empty roster honest", () => {
   const brief = M.compose.brief({ playlist: { owner: "" } }, null, { campaignType: "label_digest", tone: "editorial", length: "standard", ctaLabel: "Listen" }, { label: "Night Tapes", releases: [{ title: "New One", artist: "A", date: "2026-10-10" }] });
   assert.match(brief, /Night Tapes/);
   assert.match(brief, /New One/);

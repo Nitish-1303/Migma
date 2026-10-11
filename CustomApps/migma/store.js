@@ -39,11 +39,7 @@ Migma.store = (() => {
     return Spicetify.LocalStorage;
   }
 
-  // Local storage is finite and shared with the client itself, so a cache write must never be the
-  // thing that fails a campaign. Every write goes through here: a full store drops the digest
-  // cache and tries once more, and a second failure is abandoned silently — the plugin then runs
-  // uncached rather than surfacing a storage error as a Migma one. Settings outrank the cache, so
-  // a settings write is the one allowed to evict it.
+  // Local storage is finite and shared with the client itself, so a cache write must never be the thing that fails a campaign.
   function write(key, value) {
     try {
       ls().set(key, value);
@@ -59,8 +55,7 @@ Migma.store = (() => {
     }
   }
 
-  // Settings held as lists would otherwise reach the request builders as something they cannot
-  // iterate if an older store or a hand-edit left them a non-array.
+  // Settings held as lists would otherwise reach the request builders as something they cannot iterate if an older store or a hand-edit left them a non-array.
   function normalise(next) {
     for (const key of ["languages", "dates", "roster"]) {
       if (!Array.isArray(next[key])) next[key] = [];
@@ -88,7 +83,6 @@ Migma.store = (() => {
   }
 
   // Appearance is a display preference, not a credential, so it survives a disconnect.
-  // The project, the imported brand and the copy defaults belong to the connection, so they do not.
   function forget() {
     const theme = get().theme;
     settings = normalise(Object.assign({}, defaults, { theme }));
@@ -101,8 +95,7 @@ Migma.store = (() => {
     return () => listeners.delete(fn);
   }
 
-  // A proxy and a project are the whole of it: the session that authorises calls is minted on
-  // demand and held in memory, so it is never what decides whether the app has somewhere to work.
+  // A proxy and a project are the whole of it.
   function isConnected() {
     const s = get();
     return Boolean(s.proxyUrl && s.projectId);
@@ -117,9 +110,6 @@ Migma.store = (() => {
   }
 
   // A digest is the largest thing the plugin stores, so this cap is what bounds the store.
-  // Eviction is by age rather than by insertion order: re-caching a playlist updates its
-  // entry in place without moving it, so trimming the tail of the object would drop a playlist
-  // the user keeps returning to and keep eleven staler ones.
   function cacheDigest(playlistId, digest) {
     const all = readDigests();
     all[playlistId] = { at: Date.now(), digest };
@@ -136,8 +126,7 @@ Migma.store = (() => {
     return hit.digest;
   }
 
-  // Set by extension.js when the user enters through the context menu or topbar,
-  // consumed once by the app so a refresh does not replay the old target.
+  // Set by extension.js when the user enters through the context menu or topbar, consumed once by the app so a refresh does not replay the old target.
   let handoff = null;
   let lastPlaylist = "";
 

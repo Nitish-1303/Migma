@@ -1,11 +1,3 @@
-/**
- * Configuration, read once at boot and validated before the socket is opened.
- *
- * A misconfigured proxy should fail to start rather than start and leak: an empty
- * MIGMA_API_KEY would otherwise mean every upstream call goes out unauthenticated,
- * and a short SESSION_SECRET means forgeable sessions.
- */
-
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

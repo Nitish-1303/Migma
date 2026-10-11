@@ -51,7 +51,7 @@
   --mg-out: cubic-bezier(0, 0, 0.2, 1);
   --mg-cubic: cubic-bezier(0.33, 1, 0.68, 1);
 
-  /* The official Migma brand gradient — the generative spectrum the plugin
+  /* The official Migma brand gradient, the generative spectrum the plugin
      reveals behind its AI actions. */
   --mg-spectrum: linear-gradient(90deg, #f4021e, #e501b7, #f48402, #f4021e);
   /* The named brand palette. The warm colours are accents only: they never carry body text and
@@ -162,11 +162,8 @@
 
   --mg-tx: #111;
   --mg-tx2: #3f3f46;
-  /* Both greys are darker than their dark-mode counterparts. They carry the 10-12px
-     runs — hints, tile captions, track counts, idea meta — and those runs sit on cards that
-     darken as they are used: #f0f0f0 at rest, #e9e9ea on hover, #e7e7e7 once selected. A grey
-     pegged to white alone clears 4.5:1 on the resting card and loses it the moment a pointer
-     touches one, so both are set against the deepest substrate they can land on instead. */
+  /* Both greys are darker than dark mode's: they carry 10-12px runs on cards that darken when
+     used (#f0f0f0 / #e9e9ea / #e7e7e7), so each sits against the deepest substrate it can land on. */
   --mg-tx3: #5f5f64;
   --mg-tx4: #66666b;
   --mg-tx-lbl: #27272a;

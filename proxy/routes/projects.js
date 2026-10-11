@@ -1,20 +1,10 @@
-/**
- * Project routes.
- *
- * GET /v1/projects        -- the list the plugin's connect step populates.
- * POST /v1/projects/import -- brand import, documented at 30-60 seconds, so it
- *                             carries its own timeout rather than the default.
- */
-
 import { badRequest } from "../lib/http.js";
 import { SCOPES } from "../lib/session.js";
 import { optionalIdempotencyKey, optionalPaging, requireId } from "../lib/guard.js";
 
 const IMPORT_TIMEOUT_MS = 90000;
 
-// A brand import fetches whatever it is pointed at, so the target is checked here
-// rather than handed to upstream as typed: https only, and no credentials in the
-// URL, which are the two ways a pasted address turns into something else.
+// A brand import fetches whatever it is pointed at, so the target is checked here rather than handed to upstream as typed.
 function requireHttpsUrl(value, field) {
   const raw = typeof value === "string" ? value.trim() : "";
   if (!raw) throw badRequest(`${field} is required`);
@@ -64,9 +54,7 @@ export function registerProjectRoutes(router) {
         path: "/projects/import",
         body: payload,
         requestId: ctx.requestId,
-        // Accepted and length-checked so a caller learns the rule here rather than
-        // from upstream. Import is not on the list of routes that honour it, so it
-        // is not forwarded; see the README.
+        // Accepted and length-checked so a caller learns the rule here rather than from upstream.
         idempotencyKey: undefined,
         timeoutOverrideMs: IMPORT_TIMEOUT_MS,
         projectScoped: true

@@ -1,9 +1,3 @@
-/**
- * Routing. Exact segment matching with named parameters, each constrained by its
- * own pattern at registration rather than validated after the fact -- a request
- * whose parameter cannot be safe never reaches a handler.
- */
-
 const DEFAULT_PARAM = /^[A-Za-z0-9_-]{1,128}$/;
 
 /**
@@ -20,8 +14,7 @@ function bind(route, parts) {
       if (segment.name !== parts[i]) return null;
       continue;
     }
-    // A malformed escape such as %zz throws here. That is a request matching no
-    // route, not a proxy fault, so it is a miss rather than an error.
+    // A malformed escape such as %zz throws here.
     let value;
     try {
       value = decodeURIComponent(parts[i]);

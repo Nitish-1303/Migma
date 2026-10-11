@@ -8,7 +8,7 @@ client-side code and git."* A Spicetify plugin is client-side code by definition
 cannot live there. This proxy holds it and hands the plugin a short-lived, scoped session
 instead.
 
-Zero runtime dependencies. Node 18.17 or newer supplies everything it uses — `node:http`,
+Zero runtime dependencies. Node 18.17 or newer supplies everything it uses, `node:http`,
 `fetch`, `AbortSignal.timeout`, `node:crypto` and `node:test`.
 
 ## Run it
@@ -42,10 +42,10 @@ platform secret store overrides the file rather than fighting it.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `MIGMA_API_KEY` | — | Required. Must begin `sk_live_` or `sk_test_`. Never leaves this process. |
+| `MIGMA_API_KEY` |, | Required. Must begin `sk_live_` or `sk_test_`. Never leaves this process. |
 | `MIGMA_BASE_URL` | `https://api.migma.ai/v1` | Must be https. |
 | `MIGMA_VALIDATE_PATH` | `/validate/deliverability` | See *Unconfirmed* below. |
-| `SESSION_SECRET` | — | Required, 32 characters minimum. Signs the sessions this proxy issues. |
+| `SESSION_SECRET` |, | Required, 32 characters minimum. Signs the sessions this proxy issues. |
 | `SESSION_TTL_SECONDS` | `900` | 60–86400. |
 | `ALLOWED_ORIGINS` | `https://xpui.app.spotify.com` | Comma-separated exact origins. Never `*`. |
 | `ALLOWED_SPOTIFY_USERS` | empty | Comma-separated Spotify user ids. Empty means any account Spotify authenticates. |
@@ -62,8 +62,8 @@ platform secret store overrides the file rather than fighting it.
 
 | Route | Session | Scope | Upstream |
 | --- | --- | --- | --- |
-| `GET /healthz` | no | — | none |
-| `POST /session` | no | — | `GET https://api.spotify.com/v1/me` |
+| `GET /healthz` | no |, | none |
+| `POST /session` | no |, | `GET https://api.spotify.com/v1/me` |
 | `GET /v1/projects` | yes | `projects:read` | `GET /projects` |
 | `POST /v1/projects/import` | yes | `projects:import` | `POST /projects/import` |
 | `POST /v1/projects/emails/generate` | yes | `emails:generate` | `POST /projects/emails/generate` |
@@ -81,7 +81,7 @@ The order is the design. Nothing reaches an upstream call until every step has p
 
 1. **CORS.** An `Origin` off the allowlist is refused with 403 and *no* CORS headers, so the
    browser reports it as blocked rather than handing the page a body to read. A caller with no
-   `Origin` — curl, a health checker — is not making a CORS request and is left alone.
+   `Origin`, curl, a health checker, is not making a CORS request and is left alone.
 2. **Routing.** Path parameters are constrained by a per-route pattern at the router, so a
    value shaped like a traversal never reaches a handler. Known path with the wrong verb is
    405 and names the verbs it does take; unknown path is 404.
@@ -98,8 +98,8 @@ The order is the design. Nothing reaches an upstream call until every step has p
 
 ## The session
 
-`POST /session` takes the token the Spotify desktop client is already using — in
-`spotify_token`, or as `Authorization: Bearer` — and probes `GET /v1/me`. That endpoint needs
+`POST /session` takes the token the Spotify desktop client is already using, in
+`spotify_token`, or as `Authorization: Bearer`, and probes `GET /v1/me`. That endpoint needs
 no scope, which is why it is the right check: a 200 means Spotify authenticated the caller, and
 the `id` in the reply becomes the session's subject. Only `id`, `product` and `country` are
 kept; display name, email and images are not this proxy's business and would turn a log line
@@ -110,8 +110,8 @@ What comes back is an HMAC-SHA256 statement, `ms1.<claims>.<signature>`, carryin
 instances behind a load balancer accept each other's sessions and a restart does not sign every
 client out.
 
-The scopes are this proxy's own — `projects:read`, `projects:import`, `emails:generate`,
-`emails:read`, `validate:read` — not Migma's. No Migma scope string is invented here, and no
+The scopes are this proxy's own, `projects:read`, `projects:import`, `emails:generate`,
+`emails:read`, `validate:read`, not Migma's. No Migma scope string is invented here, and no
 client-held session can widen what the key itself may do. There is deliberately no send scope
 and no billing scope: the plugin does not send email, so a session that could would be a
 liability.
@@ -119,8 +119,8 @@ liability.
 ## The key
 
 `lib/migma.js` is the only file that reads `MIGMA_API_KEY` and the only one that sets an
-`Authorization` header. Nothing inbound is forwarded — not a header, not a cookie, not a
-tracing id — so a caller cannot smuggle its own credential through this hop. Only six upstream
+`Authorization` header. Nothing inbound is forwarded, not a header, not a cookie, not a
+tracing id, so a caller cannot smuggle its own credential through this hop. Only six upstream
 response headers come back: the four rate-limit ones, `Retry-After` and `Idempotent-Replayed`.
 
 Logs are JSON lines, and redaction runs over the serialised line rather than field by field, so
@@ -145,8 +145,8 @@ it on every request; leaving it out fails the preflight and blocks every call be
 These are stated here rather than left to be discovered.
 
 **Rate-limit state is per instance.** Two replicas allow twice the configured rate. The limit
-protects the workspace's upstream quota — Standard is 500/min and 10,000/day across the whole
-account — so a deployment that needs an exact ceiling wants a shared counter instead of this
+protects the workspace's upstream quota, Standard is 500/min and 10,000/day across the whole
+account, so a deployment that needs an exact ceiling wants a shared counter instead of this
 in-memory bucket.
 
 **Rotating `SESSION_SECRET` is the only revocation lever.** A stateless session cannot be
@@ -168,7 +168,7 @@ an hour of debugging a permission problem that is really a typo.
 **Unconfirmed: the deliverability route.** Its upstream path and body are the one part of this
 bridge taken from a summary rather than read off the API reference. Confirm both against
 <https://docs.migma.ai/api-reference/introduction> before relying on it; `MIGMA_VALIDATE_PATH`
-exists so a correction is a restart rather than a patch. Note also what it forecasts — inbox
+exists so a correction is a restart rather than a patch. Note also what it forecasts, inbox
 placement, whether a message lands in the inbox rather than a spam folder. It is not a
 conversion estimate, and a surface that reports a number to a user should not conflate them.
 
@@ -181,13 +181,13 @@ does not document.
 `POST /projects/emails/generate` with `{ conversationId, status: "pending" }`, and the client polls
 `GET /projects/emails/{conversationId}/status` with exponential backoff until it reads `completed`, at
 which point `data.result.emails[]` carries `{ emailId, subject, html, screenshotUrl }` per language. No
-polling interval is published, so this proxy sets none — it reports upstream's status verbatim and lets
+polling interval is published, so this proxy sets none, it reports upstream's status verbatim and lets
 the client pace itself, because inventing a cadence here would hide the fact that nobody has committed
 to one. The only timing upstream does commit to is 30–60 seconds for a brand import.
 
 **Only published routes are exposed, and the client asks only for those.** The paths the plugin once
-reached for — `/campaigns/ideas`, `/campaigns/generate`, `/campaigns/score`, `/campaigns/translate`,
-`/workspaces/reviewers`, `/workspaces/comments`, `/workspaces/brand-kits` — are not routes on
+reached for, `/campaigns/ideas`, `/campaigns/generate`, `/campaigns/score`, `/campaigns/translate`,
+`/workspaces/reviewers`, `/workspaces/comments`, `/workspaces/brand-kits`, are not routes on
 `api.migma.ai/v1`, so neither side names them. The capabilities behind them render a *pending Migma
 API* state in the plugin instead of a runtime 404, and the test suite asserts those paths 404 here so
 the contract cannot drift. A brand is a project, imported with `POST /v1/projects/import`;
@@ -225,7 +225,7 @@ npm test
 
 Zero-dependency `node:test`. The suite covers session forgery, tampering and expiry; the CORS
 allowlist including the `X-Migma-Client` requirement; the input guards; router traversal
-refusal; and the service end to end over a real socket — preflight, the 401/403 gate, 404/405,
+refusal; and the service end to end over a real socket, preflight, the 401/403 gate, 404/405,
 the body cap, the mint limit, and that the invented `/campaigns/*` and `/workspaces/*` routes
 answer 404. None of it needs a Migma key or a network, because what it proves is that the gate
 closes, not that Migma replies.

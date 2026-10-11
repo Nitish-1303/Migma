@@ -1,14 +1,3 @@
-/**
- * POST /session -- the exchange this whole service exists for.
- *
- * In: the token the Spotify desktop client is already using. Out: a short-lived,
- * scoped session signed by this proxy. The Migma key is not involved and is never
- * mentioned in the reply.
- *
- * The response shape matches what the plugin reads in api.js authorize(): the
- * token under data.token and the lifetime under data.expires_in.
- */
-
 import { HttpError, badRequest, ok } from "../lib/http.js";
 import { PLUGIN_SCOPES, mint } from "../lib/session.js";
 import { requireString } from "../lib/guard.js";
@@ -42,9 +31,7 @@ export function registerSessionRoutes(router) {
         );
       }
 
-      // A single-tenant deployment sets ALLOWED_SPOTIFY_USERS. Left empty, any
-      // account Spotify itself authenticates may mint a session, which is the
-      // right default for a proxy the listener runs for themselves.
+      // A single-tenant deployment sets ALLOWED_SPOTIFY_USERS.
       const allowlist = ctx.config.allowedSpotifyUsers;
       if (allowlist.length && !allowlist.includes(verdict.user.id)) {
         ctx.logger.warn("session.notAllowlisted", { subject: verdict.user.id, client });

@@ -1,11 +1,3 @@
-/**
- * Entry point.
- *
- * The order of operations per request is the security design: CORS allowlist, then
- * routing, then session verification, then the rate limit, then the handler.
- * Nothing reaches an upstream call until all four have passed.
- */
-
 import http from "node:http";
 import { corsHeaders } from "./lib/cors.js";
 import { createLogger } from "./lib/log.js";
@@ -25,8 +17,7 @@ let config;
 try {
   config = loadConfig();
 } catch (error) {
-  // Written directly rather than through the logger: a misconfigured deployment
-  // needs this legible in a crash log, not wrapped in JSON.
+  // Written directly rather than through the logger.
   process.stderr.write(`${error.message}\n`);
   process.exit(1);
 }
@@ -57,9 +48,7 @@ registerValidateRoutes(
   process.env.MIGMA_VALIDATE_PATH ? { path: process.env.MIGMA_VALIDATE_PATH } : undefined
 );
 
-// Why a session was refused is worth telling the client: "expired" means re-mint,
-// "signature" means the proxy was repointed or the secret rotated. Neither reveals
-// anything an attacker does not already hold.
+// Why a session was refused is worth telling the client.
 const REFUSAL = {
   missing: "No proxy session was presented",
   malformed: "The proxy session is not readable",
@@ -91,10 +80,7 @@ async function handle(req, res, requestId, cors) {
     }
   }
 
-  // Authenticated traffic is limited per Spotify account, so one client stuck in a
-  // retry loop cannot spend another listener's share. Unauthenticated /session is
-  // limited per address, which is all there is to key on before a session exists,
-  // and on a tighter bucket because each attempt costs a call to Spotify.
+  // Authenticated traffic is limited per Spotify account, so one client stuck in a retry loop cannot spend another listener's share.
   const metered = route.pattern !== "/healthz";
   const bucket = claims ? limiter : sessionLimiter;
   const verdict = metered
@@ -109,8 +95,7 @@ async function handle(req, res, requestId, cors) {
     });
   }
 
-  // Read once and memoised: a handler that inspects the body twice would find the
-  // stream already consumed on the second read.
+  // Read once and memoised.
   let cached;
   const ctx = {
     req,
@@ -144,10 +129,7 @@ const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin;
   const cors = corsHeaders(origin, config.allowedOrigins);
 
-  // An origin off the allowlist is refused before routing and without CORS headers,
-  // so the browser reports it as blocked rather than handing the page a 403 body to
-  // read. A caller with no Origin at all -- curl, a health checker -- is not a
-  // browser and is left alone.
+  // An origin off the allowlist is refused before routing and without CORS headers, so the browser reports it as blocked rather than handing the page a 403 body to read.
   if (cors === null) {
     logger.warn("cors.refused", { origin, requestId });
     return send(res, 403, fail("This origin is not permitted", requestId), {
@@ -165,8 +147,7 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     if (error instanceof HttpError) {
       const body = fail(error.message, requestId);
-      // Mirrors how Migma reports a wait, so the client's existing backoff reads it
-      // without a second code path.
+      // Mirrors how Migma reports a wait, so the client's existing backoff reads it without a second code path.
       if (error.extra.retryAfter) body.retryAfter = error.extra.retryAfter;
       const headers = { ...cors, ...(error.extra.headers || {}), "x-request-id": requestId };
       if (error.extra.retryAfter && !headers["retry-after"]) {
@@ -174,8 +155,7 @@ const server = http.createServer(async (req, res) => {
       }
       return send(res, error.status, body, headers);
     }
-    // An unexpected fault tells the client only that it happened and which request
-    // it was. The detail goes to the log, where redaction has already run.
+    // An unexpected fault tells the client only that it happened and which request it was.
     logger.error("request.failed", {
       requestId,
       method: req.method,
@@ -190,8 +170,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-// Above the brand-import ceiling of 90s, so the one long route is not cut off by
-// the socket while it is still legitimately waiting on upstream.
+// Above the brand-import ceiling of 90s, so the one long route is not cut off by the socket while it is still legitimately waiting on upstream.
 server.requestTimeout = 120000;
 server.headersTimeout = 20000;
 server.keepAliveTimeout = 15000;
@@ -218,8 +197,7 @@ const shutdown = signal => {
   limiter.stop();
   sessionLimiter.stop();
   server.close(() => process.exit(0));
-  // Without this an idle keep-alive socket holds close() open and every rollout
-  // waits out the guard below. In-flight requests are not touched.
+  // Without this an idle keep-alive socket holds close() open and every rollout waits out the guard below.
   server.closeIdleConnections?.();
   // A request still waiting on upstream must not hold a rollout open indefinitely.
   setTimeout(() => process.exit(1), 15000).unref();

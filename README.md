@@ -1,32 +1,32 @@
-# Migma × Spotify — Music Campaign Automator
+# Migma × Spotify, Music Campaign Automator
 
-Turn any Spotify surface — playlist, track, show, roster — into a ready-to-send Migma campaign
-without leaving the client. This repo is three pieces:
+Turn a Spotify surface (playlist, track, show, roster) into a ready-to-send Migma campaign without
+leaving the client.
 
-- **`CustomApps/migma/`** — the Spicetify custom app (the plugin). Pick a source, refine a brief,
-  generate through Migma's async job, export clean HTML. See [its README](CustomApps/migma/README.md).
-- **`proxy/`** — a zero-dependency Node backend-for-frontend. It holds the Migma key, exchanges the
-  Spotify session for a short-lived scoped one, and forwards only documented Migma routes. See
-  [its README](proxy/README.md).
-- **`wireframe/`** — a single-file storyboard of the whole product, deployable as a static site.
+Three pieces:
 
-The guiding rule: **every claim the app makes is real.** It calls only endpoints Migma publishes;
-capabilities Migma has not shipped a route for render a "pending Migma API" state instead of calling a
-fake route, and the one place that would otherwise need data no API provides is marked **MOCK**.
+- `CustomApps/migma/`, the Spicetify custom app. Pick a source, write a brief, generate through
+  Migma's async job, export HTML. [README](CustomApps/migma/README.md).
+- `proxy/`, a zero-dependency Node BFF. Holds the Migma key, swaps the Spotify session for a scoped
+  one, forwards only documented Migma routes. [README](proxy/README.md).
+- `wireframe/`, single-file storyboard, deployable as a static site.
+
+The app calls only endpoints Migma publishes. Anything Migma has no route for shows a "pending Migma
+API" state; the one spot that would need data no API provides is marked MOCK.
 
 ## Campaign types
 
-| Type | Source | Data |
+| Type | Source | Notes |
 | --- | --- | --- |
-| Playlist campaign | A playlist | Real (Spotify reads → brief → Migma generate) |
-| Artist announcement | A playlist or a single track | Real |
-| Playlist pitch | A track + a target playlist | Real |
-| Show promo | Manual date list | Real inputs; nearest-city ordering is **MOCK** (no listener-location API) |
-| Label digest | A roster of artists | Real (releases from the last 7 days) |
-| New-release watch | A watched artist | Real; polls while the app is open, drafts an announcement on a new release |
+| Playlist campaign | A playlist | |
+| Artist announcement | A playlist or a single track | |
+| Playlist pitch | A track + a target playlist | |
+| Show promo | Manual date list | nearest-city ordering is MOCK (no listener-location API) |
+| Label digest | A roster of artists | releases from the last 7 days |
+| New-release watch | A watched artist | polls while the app is open, drafts on a new release |
 
-All of them run the same generate-and-poll pipeline. Deliverability scoring is **pending** (no Migma
-endpoint). Nothing sends email — the plugin produces HTML and hands off; Migma owns delivery and consent.
+All run the same generate-and-poll pipeline. Deliverability scoring is pending (no Migma endpoint).
+The plugin produces HTML and hands off; sending and lists stay in Migma.
 
 ## Tests
 
@@ -38,24 +38,18 @@ cd proxy && npm test
 node --test CustomApps/migma/test/client.test.cjs
 ```
 
-The proxy suite runs over a real socket with no Migma key and no network; the client suite loads the
-plugin's browser scripts under stubs and checks the honest-API contracts, the campaign briefs, the
-release filter and the email preview player.
+## Deploy the storyboard (Vercel)
 
-## Deploy the storyboard (Vercel, dashboard)
-
-The storyboard is a static site with no build step and **no external requests** — fonts and brand
-assets are bundled in `wireframe/`.
-
-1. Push this repo to GitHub (done: `github.com/Nitish-1303/Migma`).
-2. In the Vercel dashboard: **Add New → Project**, then **Import** this repository.
-3. Set **Root Directory** to `wireframe/`.
-4. Leave Framework Preset as **Other**; there is no build or install command (`wireframe/vercel.json`
-   pins this). Output directory is the root (`.`).
-5. **Deploy.** The storyboard loads at the project URL with zero console errors.
+Static site, no build step, no external requests. In the Vercel dashboard: Add New → Project, import
+this repo, set Root Directory to `wireframe/`, Framework Preset Other (no build/install command,
+pinned by `wireframe/vercel.json`), Deploy.
 
 ## Install the plugin
 
-See [CustomApps/migma/README.md](CustomApps/migma/README.md). In short: copy the folder into
-Spicetify's `CustomApps`, `spicetify config custom_apps migma`, `spicetify apply`, and point it at a
-running `proxy/`.
+Copy `CustomApps/migma/` into Spicetify's `CustomApps`, then:
+
+```bash
+spicetify config custom_apps migma && spicetify apply
+```
+
+Point it at a running `proxy/`. Full notes in [CustomApps/migma/README.md](CustomApps/migma/README.md).

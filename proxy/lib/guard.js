@@ -1,12 +1,3 @@
-/**
- * Input guards.
- *
- * Everything here crosses a trust boundary twice: it arrives from a browser and
- * is then spliced into an upstream URL or body. A conversationId that is not
- * checked against a charset is a path traversal into api.migma.ai, and a prompt
- * with no ceiling is an unbounded upstream bill.
- */
-
 import { badRequest } from "./http.js";
 
 // Opaque upstream identifiers. Deliberately no dot and no slash.

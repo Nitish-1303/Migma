@@ -1,16 +1,3 @@
-/**
- * Deliverability validation.
- *
- * What this forecasts is inbox placement -- whether a message lands in the inbox
- * rather than a spam folder. It is not a conversion estimate, and the two are worth
- * keeping apart when a surface reports a number to a user.
- *
- * The upstream path and body here are the one part of this bridge taken from a
- * summary rather than read off the reference. Confirm both against
- * https://docs.migma.ai/api-reference/introduction before relying on this route;
- * MIGMA_VALIDATE_PATH exists so a correction is a config change, not a patch.
- */
-
 import { badRequest } from "../lib/http.js";
 import { SCOPES } from "../lib/session.js";
 import { requireId, requireString } from "../lib/guard.js";
@@ -25,8 +12,7 @@ export function registerValidateRoutes(router, { path = DEFAULT_PATH } = {}) {
       const body = await ctx.body();
       const payload = {};
 
-      // Either an already-generated email by id, or raw markup. One of the two has
-      // to be present, or there is nothing to score.
+      // Either an already-generated email by id, or raw markup.
       if (body.emailId !== undefined) payload.emailId = requireId(body.emailId, "emailId");
       if (body.html !== undefined) {
         payload.html = requireString(body.html, "html", { min: 1, max: MAX_HTML, trim: false });

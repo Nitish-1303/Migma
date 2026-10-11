@@ -1,8 +1,3 @@
-/**
- * The boundaries: what CORS admits, what the guards refuse, what the router lets
- * through, and the one response shape the client is allowed to see.
- */
-
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ALLOWED_HEADERS, corsHeaders, parseOrigins } from "../lib/cors.js";
@@ -13,7 +8,7 @@ import { optionalLocales, optionalPaging, requireId, requireString } from "../li
 
 const ORIGINS = parseOrigins("https://xpui.app.spotify.com, http://localhost:8080/");
 
-test("the allowlist is exact and trailing slashes do not defeat it", () => {
+test("allowlist exact, trailing slash stripped", () => {
   assert.deepEqual(ORIGINS, ["https://xpui.app.spotify.com", "http://localhost:8080"]);
   assert.equal(corsHeaders("https://xpui.app.spotify.com", ORIGINS)["access-control-allow-origin"],
     "https://xpui.app.spotify.com");
@@ -23,7 +18,7 @@ test("the allowlist is exact and trailing slashes do not defeat it", () => {
   assert.deepEqual(corsHeaders(undefined, ORIGINS), {});
 });
 
-test("every header the plugin actually sends is admitted", () => {
+test("plugin headers admitted", () => {
   // X-Migma-Client rides on every request; omitting it fails the preflight and no
   // call is ever made. Migma-Session carries the minted session.
   for (const header of ["Content-Type", "Authorization", "Migma-Session", "X-Migma-Client"]) {
@@ -43,7 +38,7 @@ test("identifiers cannot carry a path", () => {
   }
 });
 
-test("strings are bounded and language tags are shaped and deduped", () => {
+test("strings and locales bounded, locales deduped", () => {
   assert.equal(requireString("  hi  ", "f"), "hi");
   assert.throws(() => requireString("x".repeat(9), "f", { max: 8 }), HttpError);
   assert.throws(() => requireString("", "f"), HttpError);
@@ -61,7 +56,7 @@ test("paging is bounded so one request cannot be made expensive", () => {
   assert.throws(() => optionalPaging(new URLSearchParams("limit=abc")), HttpError);
 });
 
-test("the router separates a wrong verb from a wrong path", () => {
+test("router tells a wrong verb from a wrong path", () => {
   const router = createRouter();
   router.get("/v1/projects", () => {}, { scope: "projects:read" });
   router.get("/v1/projects/emails/:conversationId/status", () => {}, { auth: true });
@@ -95,7 +90,7 @@ test("public routes are opt-in, not the default", () => {
   assert.equal(router.match("GET", "/v1/projects").route.auth, true);
 });
 
-test("both directions speak one envelope", () => {
+test("one envelope both ways", () => {
   const good = ok({ projects: [] }, "req-1");
   assert.equal(good.success, true);
   assert.deepEqual(good.data, { projects: [] });

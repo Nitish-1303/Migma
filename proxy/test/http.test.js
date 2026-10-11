@@ -1,11 +1,3 @@
-/**
- * The proxy end to end, over a real socket.
- *
- * Every case here is answered before any upstream call is made, so the suite needs
- * no Migma key and no network: what is being proved is that the gate closes, not
- * that Migma replies.
- */
-
 import assert from "node:assert/strict";
 import test, { after } from "node:test";
 import { once } from "node:events";
@@ -29,7 +21,7 @@ const session = scopes =>
 
 after(() => server.close());
 
-test("health answers in the envelope and carries a request id", async () => {
+test("health envelope + request id", async () => {
   const res = await fetch(`${base}/healthz`);
   assert.equal(res.status, 200);
   assert.ok(res.headers.get("x-request-id"));
@@ -57,14 +49,14 @@ test("preflight admits the headers the plugin sends", async () => {
   assert.equal(res.headers.get("vary"), "Origin");
 });
 
-test("an origin off the allowlist is refused, and without CORS headers", async () => {
+test("off-allowlist origin: 403, no CORS headers", async () => {
   const res = await fetch(`${base}/healthz`, { headers: { origin: "https://evil.example" } });
   assert.equal(res.status, 403);
   assert.equal(res.headers.get("access-control-allow-origin"), null);
   assert.equal((await res.json()).success, false);
 });
 
-test("no session, an unreadable one, and a forged one are all 401", async () => {
+test("missing, unreadable and forged sessions all 401", async () => {
   for (const headers of [{}, { "migma-session": "nonsense" }, { "migma-session": "ms1.a.b" }]) {
     const res = await fetch(`${base}/v1/projects`, { headers: { origin: ORIGIN, ...headers } });
     assert.equal(res.status, 401);
@@ -84,7 +76,7 @@ test("a valid session without the scope is 403, not 401", async () => {
   assert.match((await res.json()).error, /scoped/i);
 });
 
-test("a known path with the wrong verb is 405 and an unknown path is 404", async () => {
+test("405 on wrong verb, 404 on unknown path", async () => {
   const wrongVerb = await fetch(`${base}/v1/projects/import`, {
     headers: { origin: ORIGIN, "migma-session": session(PLUGIN_SCOPES) }
   });
@@ -95,10 +87,9 @@ test("a known path with the wrong verb is 405 and an unknown path is 404", async
   assert.equal(unknown.status, 404);
 });
 
-// The plugin once reached for these; none is a route Migma publishes, so the proxy must expose
-// none of them. A 404 here is the contract that keeps the client honest: a feature with no real
-// endpoint has nowhere to call, so it stays a pending state in the UI instead of a fake request.
-test("the invented campaign and workspace routes do not exist on this proxy", async () => {
+// The plugin once reached for these; none is a published route, so the proxy exposes none of
+// them. The 404 is the contract behind the client's pending-API flag.
+test("invented campaign and workspace routes 404", async () => {
   const session_ = session(PLUGIN_SCOPES);
   const absent = [
     "/campaigns/ideas",
@@ -140,7 +131,7 @@ test("a body over the cap is refused before it is parsed", async () => {
   assert.equal(res.status, 413);
 });
 
-test("a malformed body is 400 and never becomes an upstream call", async () => {
+test("malformed body is 400, never an upstream call", async () => {
   const res = await fetch(`${base}/v1/projects/emails/generate`, {
     method: "POST",
     headers: {

@@ -44,8 +44,7 @@
     return m ? `spotify:track:${m[1]}` : "";
   }
 
-  // `direct` says the user aimed at this playlist on purpose, so the app opens on the
-  // digest instead of the picker. Both entry points here carry that intent.
+  // `direct` says the user aimed at this playlist on purpose, so the app opens on the digest instead of the picker.
   function open(uri, direct = true) {
     if (uri) Migma.store.setHandoff(uri, direct);
     Spicetify.Platform.History.push("/migma");

@@ -7,10 +7,7 @@ window.Migma = window.Migma || {};
   const h = U.h;
   const F = U.React.Fragment;
 
-  // Three steps, and the sequence is the whole navigation model: pick the playlist, choose and
-  // refine the campaign, review and export it. Each one is a single surface that changes what it
-  // shows as the work progresses rather than a screen that hands off to the next. Settings sits
-  // outside the sequence.
+  // Three steps, and the sequence is the whole navigation model.
   const STEPS = [
     { value: "pick", label: "Pick a playlist" },
     { value: "refine", label: "Choose & refine" },
@@ -33,9 +30,7 @@ window.Migma = window.Migma || {};
     { value: "light", label: "White" },
     { value: "system", label: "System" }
   ];
-  // The two things a campaign can be built from. Playlist campaign is the flagship — a playlist's
-  // audience, drafted into an email. Artist announcement reframes the same pipeline as a fan email
-  // for a release, sourced from a playlist or a single track.
+  // The two things a campaign can be built from.
   const CAMPAIGN_TYPES = [
     { value: "playlist", label: "Playlist campaign" },
     { value: "artist_announce", label: "Artist announcement" },
@@ -43,18 +38,15 @@ window.Migma = window.Migma || {};
     { value: "show_promo", label: "Show promo" },
     { value: "label_digest", label: "Label digest" }
   ];
-  // The three panes of step two. Only the brief calls a live endpoint; angles and review name
-  // capabilities Migma has not published a route for, so they render a pending state in place.
+  // The three panes of step two.
   const TABS = [
     { value: "angles", label: "Angles" },
     { value: "brief", label: "Brief" },
     { value: "review", label: "Review" }
   ];
-  // Offered as extra generation languages. Migma returns one email per language, so these add to
-  // the brief's own language rather than translating after the fact.
+  // Offered as extra generation languages.
   const GEN_LANGS = ["es", "fr", "de", "it", "pt-br", "nl", "ja", "ko"];
-  // Only used to give a locale code a readable name in the select. A code that is not listed
-  // still works — it falls back to the code itself rather than being hidden.
+  // Only used to give a locale code a readable name in the select.
   const LOCALE_NAMES = {
     en: "English",
     "en-gb": "English (UK)",
@@ -132,9 +124,7 @@ window.Migma = window.Migma || {};
     return /^[a-zA-Z0-9]{20,24}$/.test(raw) ? raw : "";
   };
 
-  // A digest-shaped object for the campaign types that have no single Spotify source to read — a
-  // show announcement, a label digest. The fields the preview and the composer touch are present;
-  // the audience metrics a playlist would carry are simply zero.
+  // A digest-shaped object for the campaign types that have no single Spotify source to read, a show announcement, a label digest.
   const syntheticDigest = ({ id, name, owner, image, tracks }) => ({
     playlist: { id: id || "synthetic", name: name || "", description: "", owner: owner || "", followers: 0, image: image || "" },
     trackCount: tracks ? tracks.length : 0,
@@ -149,10 +139,7 @@ window.Migma = window.Migma || {};
     tags: [],
     tracks: tracks || []
   });
-  // A handoff carries the entry point's intent: the context menu and the topbar aimed at a specific
-  // playlist or track on purpose, so the picker is skipped. An inferred route only preselects. A
-  // track handoff flips the app into artist-announcement mode, because that is the only type a single
-  // track sources.
+  // A handoff carries the entry point's intent.
   function detectSource() {
     const handoff = Migma.store.takeHandoff();
     if (handoff) {
@@ -218,9 +205,7 @@ window.Migma = window.Migma || {};
       window.open(url, "_blank");
     }
   }
-  // Migma's generated html is the real artifact, copied and downloaded verbatim — but it is never
-  // handed to the DOM. The preview renders a plain-text reading of it instead, so a generated
-  // email can be read on screen without the plugin ever injecting markup it did not author.
+  // Migma's generated html is the real artifact, copied and downloaded verbatim, but it is never handed to the DOM.
   function plainText(html) {
     if (!html) return "";
     return String(html)
@@ -239,10 +224,7 @@ window.Migma = window.Migma || {};
       .trim();
   }
 
-  // metrics.js owns the local composer and stays untouched, so a brand kit is applied to the HTML
-  // it returns. These are the literals it writes for a white email; this list is the only place
-  // the two files are coupled by value rather than by call. Migma's own generation already carries
-  // the imported brand, so this only ever retints the local preview and the pre-generation export.
+  // metrics.js owns the local composer and stays untouched, so a brand kit is applied to the HTML it returns.
   const EM_COLOURS = {
     "#f4f4f5": "page",
     "#f8f8fa": "foot",
@@ -264,8 +246,7 @@ window.Migma = window.Migma || {};
     // One pass, so a colour substituted for one token can never be re-read as another.
     out = out.replace(EM_HEX, m => kit[EM_COLOURS[m]] || m);
 
-    // The body stack is swapped everywhere first; the heading anchor is then computed against
-    // the result, so the H1 ends up with the display stack alone rather than both.
+    // The body stack is swapped everywhere first;
     if (kit.body) {
       out = out.split("Helvetica,Arial,sans-serif").join(kit.body);
       if (kit.display) out = out.split(`700 26px/1.25 ${kit.body}`).join(`700 26px/1.25 ${kit.display}`);
@@ -275,8 +256,7 @@ window.Migma = window.Migma || {};
     return out;
   }
 
-  // Kit colours reach the preview as scoped custom properties, so nothing a workspace authors can
-  // touch the app's own theme tokens — only the artifact inside .mg-email.
+  // Kit colours reach the preview as scoped custom properties, so nothing a workspace authors can touch the app's own theme tokens, only the artifact inside .mg-email.
   const kitVars = kit =>
     kit
       ? {
@@ -293,21 +273,16 @@ window.Migma = window.Migma || {};
         }
       : undefined;
 
-  // The kit's accent wins for the CTA, handed to metrics.js as a settings object rather than
-  // patched into the HTML afterwards.
+  // The kit's accent wins for the CTA, handed to metrics.js as a settings object rather than patched into the HTML afterwards.
   const kitSettings = (settings, kit) => (kit ? Object.assign({}, settings, { accent: kit.accent }) : settings);
-  // The locally composed artifact, used for the preview and as the export before any generation
-  // exists. `shown.body` is the plain-text reading of whichever email is on screen, so the local
-  // composer and Migma's own output describe the same copy.
+  // The locally composed artifact, used for the preview and as the export before any generation exists.
   const composeHtml = (digest, shown, settings, kit) =>
     brandedHtml(
       Migma.compose.emailHtml({ digest, idea: shown.idea, body: shown.body, settings: kitSettings(settings, kit) }),
       kit
     );
 
-  // The preview, export and copy all read the campaign through here: whichever generated email is
-  // selected, reduced to the plain fields the surfaces need. Before a generation exists there is
-  // no email, so the composer runs from the digest alone.
+  // The preview, export and copy all read the campaign through here.
   function viewCopy(state) {
     const emails = state.emails || [];
     const email = emails.find(e => e.emailId === state.emailId) || emails[0] || null;
@@ -319,16 +294,14 @@ window.Migma = window.Migma || {};
     };
   }
 
-  // Copy and download hand back Migma's own html verbatim when a generation exists — that is the
-  // real deliverable — and fall back to the local composer only before one does.
+  // Copy and download hand back Migma's own html verbatim when a generation exists, that is the real deliverable, and fall back to the local composer only before one does.
   function exportHtml(state, settings, kit) {
     const shown = viewCopy(state);
     if (shown.email && shown.email.html) return shown.email.html;
     return composeHtml(state.digest, shown, settings, kit);
   }
 
-  // Every surface for a capability Migma has not published an endpoint for renders through here, so
-  // "pending Migma API" reads the same way everywhere and never pretends to be an error.
+  // Every surface for a capability Migma has not published an endpoint for renders through here, so "pending Migma API" reads the same way everywhere and never pretends to be an error.
   const Pending = ({ title, note }) =>
     h(U.StateView, {
       glyph: "◴",
@@ -347,9 +320,7 @@ window.Migma = window.Migma || {};
     const abort = useRef(null);
     const live = useRef(true);
 
-    // The check can be pressed again before the first answer arrives, and the project list is what
-    // connect() saves against — so the reply to a superseded proxy is cancelled outright rather than
-    // left to fill the select with another workspace's projects.
+    // The check can be pressed again before the first answer arrives, and the project list is what connect() saves against, so the reply to a superseded proxy is cancelled outright rather than left to fill the select with another workspace's projects.
     useEffect(() => {
       live.current = true;
       return () => {
@@ -365,8 +336,7 @@ window.Migma = window.Migma || {};
       const usable = () => live.current && !ctrl.signal.aborted;
       setBusy(true);
       setStatus(null);
-      // Any session already in hand was granted by whatever proxy was configured a moment ago, so it
-      // is dropped before the new address is asked for one.
+      // Any session already in hand was granted by whatever proxy was configured a moment ago, so it is dropped before the new address is asked for one.
       Migma.store.set({ proxyUrl: proxyUrl.trim() });
       Migma.api.endSession();
       try {
@@ -511,8 +481,7 @@ window.Migma = window.Migma || {};
       selected && h("span", { className: "mg-chip is-on" }, "Selected")
     );
 
-  // Both digest halves are fragments so their blocks are direct children of the step's own column
-  // and inherit its rhythm, rather than sitting in a wrapper that would need its own spacing.
+  // Both digest halves are fragments so their blocks are direct children of the step's own column and inherit its rhythm, rather than sitting in a wrapper that would need its own spacing.
   const DigestWait = ({ progress }) =>
     h(
       F,
@@ -580,11 +549,7 @@ window.Migma = window.Migma || {};
       )
     );
   };
-  // Step one is one surface rather than three screens: choose a source and the same surface fills
-  // with its audience. A campaign-type toggle sits at the top — playlist campaign or artist
-  // announcement — and in announcement mode a single track can be pasted or taken from the player,
-  // because a release is as often one track as a playlist.
-  // Playlist pitch: the artist's track plus the curator's playlist, both read through Spotify.
+  // Step one is one surface rather than three screens.
   function PitchPanel({ typeField, onBuild }) {
     const [trackUrl, setTrackUrl] = useState("");
     const [targetUrl, setTargetUrl] = useState("");
@@ -613,8 +578,7 @@ window.Migma = window.Migma || {};
     );
   }
 
-  // Show promo: an editable date list, stored in settings. No ticketing API exists, so the rows
-  // are manual input and the links are whatever the artist pastes.
+  // Show promo.
   function ShowPanel({ typeField, settings, onSetting, onBuild }) {
     const dates = settings.dates || [];
     const setDates = next => onSetting({ dates: next });
@@ -664,11 +628,9 @@ window.Migma = window.Migma || {};
       h(U.Btn, { block: true, disabled: !ready, onClick: onBuild }, "Build announcement")
     );
   }
-  // MOCK: a "nearest city first" segment would need Spotify listener-location data, which no public
-  // endpoint exposes; the date order is whatever the artist entered.
+  // MOCK.
 
-  // Label digest: an editable roster, stored in settings. Releases are real — fetched per artist
-  // and filtered to the last 7 days — so an empty roster or a quiet week shows an honest empty state.
+  // Label digest.
   function LabelPanel({ typeField, settings, onSetting, onBuild, busy }) {
     const roster = settings.roster || [];
     const setR = next => onSetting({ roster: next });
@@ -711,9 +673,7 @@ window.Migma = window.Migma || {};
     );
   }
 
-  // Step one is one surface: a campaign-type toggle, then the source inputs that type needs. The
-  // playlist and artist types read a Spotify source into a digest in place; pitch, show and label
-  // collect their inputs and build straight into step two.
+  // Step one is one surface.
   function PickView(props) {
     const { state, progress, query, onQuery, onPick, onChange, campaignType, onType, onTrack, onUseCurrent, settings, onSetting } = props;
     const artist = campaignType === "artist_announce";
@@ -912,9 +872,7 @@ window.Migma = window.Migma || {};
       )
     );
   }
-  // While a kit is active it owns the accent, so the brand-colour row shows the kit instead of a
-  // swatch: offering a colour picker the export would ignore would be a lie. The brand itself is
-  // imported from a site through Migma's project-import route rather than picked from a list.
+  // While a kit is active it owns the accent, so the brand-colour row shows the kit instead of a swatch.
   function BriefPanel(props) {
     const { state, settings, kit, onSetting, onGenerate, onStop, briefText, onBrief, onImportBrand, onClearBrand, onToggleLang } = props;
     const langs = settings.languages || [];
@@ -1017,9 +975,7 @@ window.Migma = window.Migma || {};
       )
     );
   }
-  // The bar holds the one choice that belongs to the artifact rather than to the brief — which
-  // returned language is on screen — plus the job's live state and anything that failed, reported
-  // here so a hiccup never takes the draft down with it.
+  // The bar holds the one choice that belongs to the artifact rather than to the brief, which returned language is on screen, plus the job's live state and anything that failed, reported here so a hiccup never takes the draft down with it.
   function CanvasBar({ state, onEmail, onNotice }) {
     const emails = state.emails || [];
     const opts = emails.map((e, i) => ({
@@ -1138,9 +1094,7 @@ window.Migma = window.Migma || {};
       )
     );
   }
-  // Step three is the artifact's receipt: what was generated, where its brand came from, and the
-  // two exports that never touch the workspace. Scoring would belong here, but Migma publishes no
-  // endpoint for it, so the surface says so plainly rather than show a number it cannot stand behind.
+  // Step three is the artifact's receipt.
   function ExportView({ state, settings, kit }) {
     const shown = viewCopy(state);
     const email = shown.email;
@@ -1211,26 +1165,20 @@ window.Migma = window.Migma || {};
     const mounted = useRef(true);
     const seq = useRef({});
 
-    // Every state change that lands after an await is fenced: the app must still be mounted, and
-    // the reply must be the newest one asked for on its channel. Navigating between views therefore
-    // drops the answers to questions the user has moved on from rather than patching them into
-    // whatever is on screen now. Passing a signal adds a third condition — that the request was not
-    // cancelled.
+    // Every state change that lands after an await is fenced.
     const claim = (key, signal) => {
       const n = (seq.current[key] || 0) + 1;
       seq.current[key] = n;
       return () => mounted.current && seq.current[key] === n && !(signal && signal.aborted);
     };
 
-    // Any transition that abandons a generation cancels it first, rather than leaving the client
-    // polling a job for a campaign the user has left.
+    // Any transition that abandons a generation cancels it first, rather than leaving the client polling a job for a campaign the user has left.
     const cancelPending = () => {
       if (abort.current) abort.current.abort();
       abort.current = null;
     };
 
-    // A new generation replaces the one in flight, so the controller it displaces is aborted
-    // rather than abandoned.
+    // A new generation replaces the one in flight, so the controller it displaces is aborted rather than abandoned.
     const takeover = () => {
       cancelPending();
       const ctrl = new AbortController();
@@ -1240,16 +1188,13 @@ window.Migma = window.Migma || {};
 
     const onSetting = useCallback(p => setSettings(Migma.store.set(p)), []);
 
-    // The imported brand is kept in settings in its normalised form, so the preview can be painted
-    // on a later visit — and re-normalising it here means a stored kit is validated on every read
-    // rather than trusted because it came from local storage.
+    // The imported brand is kept in settings in its normalised form, so the preview can be painted on a later visit, and re-normalising it here means a stored kit is validated on every read rather than trusted because it came from local storage.
     const activeKit = useMemo(
       () => (settings.brandKitId ? Migma.api.normKit(settings.brandKit) : null),
       [settings.brandKitId, settings.brandKit]
     );
 
-    // Settings sits outside the sequence, so it remembers the step it was opened from and hands that
-    // step back on close rather than dropping the user at the start of the flow.
+    // Settings sits outside the sequence, so it remembers the step it was opened from and hands that step back on close rather than dropping the user at the start of the flow.
     const returnTo = useRef("pick");
     const openSettings = () => {
       if (state.view !== "settings") returnTo.current = state.view;
@@ -1290,9 +1235,7 @@ window.Migma = window.Migma || {};
       }
     }
 
-    // Choosing a playlist is what starts the read, so this stays on step one and lets the step's own
-    // surface change from the picker to the audience. `reading` is what tells it which: the digest is
-    // not there yet but the playlist is, and the list underneath must not come back in the gap.
+    // Choosing a playlist is what starts the read, so this stays on step one and lets the step's own surface change from the picker to the audience.
     async function analyse(source) {
       cancelPending();
       setSettings(Migma.store.set({ sourceKind: "playlist" }));
@@ -1312,8 +1255,7 @@ window.Migma = window.Migma || {};
         notice: null
       });
       retry.current = () => analyse(source);
-      // Two playlists read in quick succession finish in whichever order the network decides, so
-      // the digest that lands is the one the user asked for last, not the one that arrived last.
+      // Two playlists read in quick succession finish in whichever order the network decides, so the digest that lands is the one the user asked for last, not the one that arrived last.
       const fresh = claim("digest");
 
       const cached = Migma.store.cachedDigest(source.id);
@@ -1345,8 +1287,7 @@ window.Migma = window.Migma || {};
       }
     }
 
-    // Going back to the list mid-read must not let the digest that is still on its way resurrect the
-    // surface it belongs to, so the read is invalidated on the way out rather than merely ignored.
+    // Going back to the list mid-read must not let the digest that is still on its way resurrect the surface it belongs to, so the read is invalidated on the way out rather than merely ignored.
     function changePlaylist() {
       claim("digest");
       cancelPending();
@@ -1363,8 +1304,7 @@ window.Migma = window.Migma || {};
       followers: 0
     });
 
-    // Artist announcements can be sourced from a single track, which is read on the same digest
-    // channel as a playlist so the newest source wins and the rest of the flow is identical.
+    // Artist announcements can be sourced from a single track, which is read on the same digest channel as a playlist so the newest source wins and the rest of the flow is identical.
     async function analyseTrack(id) {
       cancelPending();
       setSettings(Migma.store.set({ sourceKind: "track" }));
@@ -1420,8 +1360,7 @@ window.Migma = window.Migma || {};
       analyseTrack(id);
     }
 
-    // Playlist pitch reads the artist's track and the curator's playlist, then builds straight into
-    // step two: the track is the preview source, the target playlist feeds the pitch brief.
+    // Playlist pitch reads the artist's track and the curator's playlist, then builds straight into step two.
     async function analysePitch(trackUri, targetUri) {
       const tId = trackId(trackUri);
       const pId = playlistId(targetUri);
@@ -1464,8 +1403,7 @@ window.Migma = window.Migma || {};
       }
     }
 
-    // Show promo has no Spotify source — the dates are manual input — so it builds a synthetic
-    // digest and the brief from the date list, with no network call.
+    // Show promo has no Spotify source, the dates are manual input, so it builds a synthetic digest and the brief from the date list, with no network call.
     function buildShow() {
       const artistName = (settings.showArtist || "").trim() || "the artist";
       const dates = (settings.dates || []).filter(d => d && (d.city || d.venue || d.date));
@@ -1490,8 +1428,7 @@ window.Migma = window.Migma || {};
       });
     }
 
-    // Label digest fetches each roster artist's releases and keeps the last 7 days — real data, so
-    // an empty roster or a quiet week yields an empty release list rather than invented entries.
+    // Label digest fetches each roster artist's releases and keeps the last 7 days, real data, so an empty roster or a quiet week yields an empty release list rather than invented entries.
     async function buildLabel() {
       const label = (settings.labelName || "").trim() || "the label";
       const roster = (settings.roster || []).filter(r => r && r.uri);
@@ -1530,8 +1467,7 @@ window.Migma = window.Migma || {};
       }
     }
 
-    // The watch banner's one action: open artist mode with the release pre-filled as a synthetic,
-    // brand-new-release digest. No auto-send — it only drafts.
+    // The watch banner's one action.
     function draftFromRelease(rel) {
       const next = Migma.store.set({ campaignType: "artist_announce" });
       setSettings(next);
@@ -1566,16 +1502,14 @@ window.Migma = window.Migma || {};
       return undefined;
     };
 
-    // Entering step two seeds the brief from the digest and the campaign type. There are no angles
-    // to choose first, so the Brief pane is where the step opens.
+    // Entering step two seeds the brief from the digest and the campaign type.
     function goRefine() {
       briefDirty.current = false;
       setBriefText(Migma.compose.brief(state.digest, null, settings, briefContext()));
       patch({ view: "refine", tab: "brief", stale: false, error: null });
     }
 
-    // While the brief has not been hand-edited it tracks the settings, so changing tone or length
-    // rewrites it; once a generation exists, the same settings change marks the preview stale.
+    // While the brief has not been hand-edited it tracks the settings, so changing tone or length rewrites it;
     useEffect(() => {
       if (state.view !== "refine" || briefDirty.current || !state.digest) return;
       setBriefText(Migma.compose.brief(state.digest, null, settings, briefContext()));
@@ -1586,10 +1520,7 @@ window.Migma = window.Migma || {};
       if (state.view === "refine" && state.emails && !state.generating) patch({ stale: true });
     }, [settings.includeTracklist, settings.includeArtwork, settings.accent]);
 
-    // Watch runs only while the app is open — there is no background daemon. On open and every 15
-    // minutes it reads the artist's releases, baselines on the first poll, and banners exactly once
-    // when a newer release id appears. watchSeen is read from the store, not a closure, so a second
-    // interval does not re-baseline against a stale value.
+    // Watch runs only while the app is open, there is no background daemon.
     useEffect(() => {
       if (!settings.watchOn) return undefined;
       const id = artistId(settings.watchArtist);
@@ -1620,9 +1551,7 @@ window.Migma = window.Migma || {};
       };
     }, [settings.watchOn, settings.watchArtist]);
 
-    // Generation is an asynchronous job: this starts it and polls to completion, reporting the
-    // job's state through onTick so the bar can say where it is without knowing the cadence. The
-    // whole thing is fenced on identity, so a generation the user walked away from is dropped.
+    // Generation is an asynchronous job.
     async function generate() {
       const ctrl = takeover();
       const fresh = claim("gen");
@@ -1664,8 +1593,7 @@ window.Migma = window.Migma || {};
       patch({ generating: false, jobState: "" });
     }
       // A brand import is a slow project operation (documented at 30–60 seconds), so it runs on its
-    // own controller and is fenced on mount: its result is the imported brand, stored in settings
-    // in normalised form. The inferred brand is untrusted, so normKit has already vetted it.
+    // own controller and is fenced on mount.
     async function importBrand(url) {
       const clean = String(url || "").trim();
       if (!clean || state.importing) return;
@@ -1704,8 +1632,7 @@ window.Migma = window.Migma || {};
       if (state.emails) patch({ stale: true });
     }
 
-    // Starting over keeps the playlist selected but drops everything derived from it, so the picker
-    // opens on the last choice rather than on nothing.
+    // Starting over keeps the playlist selected but drops everything derived from it, so the picker opens on the last choice rather than on nothing.
     function reset() {
       cancelPending();
       briefDirty.current = false;
@@ -1757,9 +1684,7 @@ window.Migma = window.Migma || {};
       const stepIndex = STEP_IDS.indexOf(state.view);
     const connected = Migma.store.isConnected();
 
-    // Movement is backwards only: the rail offers a step already finished, never one not yet
-    // reached. A generation or a brand import in flight, and a finished export, all close the rail
-    // to jumps — the work in flight belongs to its step, and the receipt describes copy already made.
+    // Movement is backwards only.
     const stepTo = i => {
       const to = STEP_IDS[i];
       if (!to || i >= stepIndex || state.done || state.busy || state.generating || state.importing) return;
@@ -1810,8 +1735,7 @@ window.Migma = window.Migma || {};
     if (state.error && state.view !== "settings") {
       body = h(ErrorBody);
     } else if (state.view === "settings" || !connected) {
-      // Step one owns the connect form: an unconnected workspace has nothing to pick from, so the
-      // proxy, the project and the appearance sit exactly where the flow already is.
+      // Step one owns the connect form.
       body = h(ConnectView, {
         theme: settings.theme,
         settings,
@@ -1872,9 +1796,7 @@ window.Migma = window.Migma || {};
     } else {
       body = h(ExportView, { state, settings, kit: activeKit });
     }
-    // The spectrum-bordered accent is reserved for the generative action; every other forward
-    // action is the monochrome raised primary. The forward action never issues a second request:
-    // once a step's work exists, moving forward only changes the surface.
+    // The spectrum-bordered accent is reserved for the generative action;
     const actions = {
       pick: h(U.Btn, { size: "sm", disabled: !state.digest, onClick: goRefine }, "Choose & refine"),
       refine: h(
@@ -1913,10 +1835,7 @@ window.Migma = window.Migma || {};
             : null
         )
       ),
-      // The rail is the navigation model, so it sits directly under the header. It shows before the
-      // workspace is connected too — three words are the clearest thing a first run can be told
-      // about what this does. Closing it to jumps means dropping `onJump`, so the steps render as
-      // inert text rather than as buttons the guard would silently refuse.
+      // The rail is the navigation model, so it sits directly under the header.
       stepIndex >= 0
         ? h(U.Rail, {
             steps: STEPS,

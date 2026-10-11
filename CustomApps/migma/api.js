@@ -1,11 +1,7 @@
 window.Migma = window.Migma || {};
 
 Migma.api = (() => {
-  // Every path the client asks for lives here, and every one of them is a route the proxy
-  // actually serves. `session` is the proxy's own: it exchanges the Spotify session this client
-  // already holds for a short-lived, scoped one. The rest map onto Migma's published API — the
-  // project list, the brand import, and the asynchronous email-generation job with its status
-  // route. Nothing here points at a path Migma does not document.
+  // Every path the client asks for lives here, and every one of them is a route the proxy actually serves.
   const ENDPOINTS = {
     session: "/session",
     projects: "/v1/projects",
@@ -14,9 +10,7 @@ Migma.api = (() => {
     status: id => `/v1/projects/emails/${encodeURIComponent(id)}/status`
   };
 
-  // Capabilities the plugin has a surface for but Migma publishes no endpoint for yet. The UI
-  // reads this to render a plain "pending Migma API" state instead of calling a route that does
-  // not exist. When Migma ships one it moves from here into ENDPOINTS and the surface lights up.
+  // Capabilities the plugin has a surface for but Migma publishes no endpoint for yet.
   const PENDING_MIGMA_API = Object.freeze({
     ideas: true, // suggested campaign angles for a playlist
     score: true, // conversion / deliverability scoring of a draft
@@ -38,10 +32,7 @@ Migma.api = (() => {
   const abortError = signal =>
     (signal && signal.reason) || Object.assign(new Error("Aborted"), { name: "AbortError" });
 
-  // A backoff that ignores the signal keeps a timer and a queued retry alive for the whole wait —
-  // and a 429 wait is however long Migma's retry-after says. A cancelled request therefore stops
-  // waiting the moment it is cancelled rather than at the end of the delay, and the abort listener
-  // is removed on the normal path so it does not accumulate on a long-lived signal.
+  // A backoff that ignores the signal keeps a timer and a queued retry alive for the whole wait, and a 429 wait is however long Migma's retry-after says.
   const sleep = (ms, signal) =>
     new Promise((resolve, reject) => {
       if (signal && signal.aborted) {
@@ -101,22 +92,18 @@ Migma.api = (() => {
     return (res.items || []).filter(p => p && p.id);
   }
 
-  // A single track, for the artist-announcement source. Read-only through the client's own
-  // session, like every other Spotify call here; the artist's genres come from a follow-up
-  // artists() lookup since the track payload does not carry them.
+  // A single track, for the artist-announcement source.
   function track(id) {
     return sp(`/tracks/${id}`);
   }
 
-  // An artist's releases, newest filtered client-side. Used by the label digest and the
-  // new-release watch. include_groups keeps it to the artist's own singles and albums.
+  // An artist's releases, newest filtered client-side.
   async function artistAlbums(id) {
     const res = await sp(`/artists/${encodeURIComponent(id)}/albums?include_groups=single,album&limit=50`);
     return (res.items || []).filter(Boolean);
   }
 
-  // A few track titles from a playlist, for the pitch brief's "already features…" line. One page,
-  // names only — the pitch needs a sample, not the whole tracklist.
+  // A few track titles from a playlist, for the pitch brief's "already features…" line.
   async function playlistTitles(id, limit = 6) {
     const page = await sp(
       `/playlists/${encodeURIComponent(id)}/tracks?limit=30&fields=${encodeURIComponent("items(track(name))")}`
@@ -130,10 +117,6 @@ Migma.api = (() => {
   const CLIENT = "spicetify-migma";
 
   // The proxy holds the workspace key and signs with it, so nothing in this client ever handles one.
-  // A session is minted by presenting the token the Spotify client is already using for its own
-  // reads, is short-lived, and is therefore kept in memory rather than stored: a reload mints
-  // another. It is keyed by the proxy that issued it, so repointing the plugin cannot reuse a token
-  // the new proxy never granted.
   const SKEW = 30 * 1000;
   let session = null;
 
@@ -147,9 +130,7 @@ Migma.api = (() => {
     return url;
   };
 
-  // Spicetify names the client's own token differently across releases, so each known shape is read
-  // in turn and the first non-empty string wins. None of them prompts and none of them asks for a
-  // scope: this is the session the user already has.
+  // Spicetify names the client's own token differently across releases, so each known shape is read in turn and the first non-empty string wins.
   function spotifyToken() {
     const platform = (window.Spicetify && Spicetify.Platform) || {};
     const auth = platform.AuthorizationAPI || {};
@@ -170,8 +151,7 @@ Migma.api = (() => {
     }
     return "";
   }
-  // A body is what makes the content type meaningful, and declaring it on a bodyless read would
-  // force a preflight that the read does not otherwise need.
+  // A body is what makes the content type meaningful, and declaring it on a bodyless read would force a preflight that the read does not otherwise need.
   function headers(accept, token, hasBody) {
     const out = { Accept: accept, "X-Migma-Client": CLIENT };
     if (hasBody) out["Content-Type"] = "application/json";
@@ -179,10 +159,7 @@ Migma.api = (() => {
     return out;
   }
 
-  // Migma answers a failure with `{success:false, error:"…"}` and carries the request id under
-  // `metadata`, so a failed reply is read once, up front: the message, the id and the rate-limit
-  // wait all come out of that single body. The header readings are fallbacks for whatever the proxy
-  // decides to surface on its own behalf.
+  // Migma answers a failure with `{success:false, error:"…"}` and carries the request id under `metadata`, so a failed reply is read once, up front.
   async function failure(res) {
     let body = null;
     try {
@@ -199,8 +176,7 @@ Migma.api = (() => {
         ? "The proxy refused this session"
         : `Migma returned ${res.status}`);
     const meta = (body && body.metadata) || {};
-    // The reset is published as an epoch timestamp; a small number is a wait in seconds instead, so
-    // both readings are accepted and the plausible one wins.
+    // The reset is published as an epoch timestamp;
     const reset = Number(res.headers.get("x-ratelimit-reset")) || 0;
     const seconds =
       Number(body && (body.retryAfter || body.retry_after)) ||
@@ -212,9 +188,7 @@ Migma.api = (() => {
       retryAfter: seconds > 0 ? Math.min(Math.round(seconds), 120) : 0
     };
   }
-  // The session is the proxy's own resource rather than a forwarded Migma one, so both a plain
-  // object and the same envelope Migma uses are accepted. A floor under the lifetime keeps a proxy
-  // that reports an implausibly short one from turning every call into two.
+  // The session is the proxy's own resource rather than a forwarded Migma one, so both a plain object and the same envelope Migma uses are accepted.
   async function authorize(signal) {
     const base = proxyBase();
     if (session && session.base === base && session.expires > Date.now() + SKEW) return session.token;
@@ -269,9 +243,7 @@ Migma.api = (() => {
 
       const fail = await failure(res);
 
-      // A short-lived session reaching its end mid-call is how it is meant to expire rather than a
-      // fault, so the first 401 mints another and repeats the call. A second means the proxy is
-      // refusing the Spotify session itself, which no retry repairs.
+      // A short-lived session reaching its end mid-call is how it is meant to expire rather than a fault, so the first 401 mints another and repeats the call.
       if (res.status === 401 && auth && !reminted) {
         reminted = true;
         endSession();
@@ -304,15 +276,13 @@ Migma.api = (() => {
     return list.map(p => ({ id: p.id, name: p.name || p.title || p.id }));
   }
 
-  // Remote records are normalised through this rather than String(), so a field that arrives as an
-  // object or a number never reaches the UI as "[object Object]".
+  // Remote records are normalised through this rather than String(), so a field that arrives as an object or a number never reaches the UI as "[object Object]".
   const str = (...values) => {
     for (const v of values) if (typeof v === "string" && v.trim()) return v.trim();
     return "";
   };
 
-  // Only https links are surfaced from a generated email; a screenshot URL that is anything else
-  // is dropped rather than offered as something to open.
+  // Only https links are surfaced from a generated email;
   const httpsUrl = value => {
     const raw = String(value == null ? "" : value).trim();
     if (!raw) return "";
@@ -323,9 +293,7 @@ Migma.api = (() => {
       return "";
     }
   };
-  // Generation is an asynchronous job, not a stream: this starts it and hands back the id to
-  // poll. languages[] is passed straight through — a completed job returns one email per language
-  // — so a single generate covers every language the brief asked for.
+  // Generation is an asynchronous job, not a stream.
   async function startGeneration(payload, signal) {
     const s = Migma.store.get();
     const body = { projectId: s.projectId, prompt: String(payload.prompt || "") };
@@ -341,9 +309,7 @@ Migma.api = (() => {
     return { conversationId, status: str(out.status, out.state).toLowerCase() || "pending" };
   }
 
-  // No polling interval is published, so the client paces itself: a short first wait growing
-  // geometrically to a ceiling, under an overall budget. Cancellation runs through the same
-  // signal-aware sleep as everything else, so leaving the step stops the poll at once.
+  // No polling interval is published, so the client paces itself.
   const POLL_START_MS = 1500;
   const POLL_GROWTH = 1.6;
   const POLL_CAP_MS = 8000;
@@ -352,8 +318,6 @@ Migma.api = (() => {
   const FAILED = ["failed", "error", "errored", "cancelled", "canceled", "rejected"];
 
   // The emails a completed job carries, each normalised to what the preview and the export read.
-  // The raw html is kept verbatim for copy and download but is never handed to the DOM — the
-  // preview renders a plain-text reading of it instead.
   function normEmails(result) {
     const list =
       (result && (result.emails || (result.result && result.result.emails) || result.data)) || [];
@@ -395,25 +359,15 @@ Migma.api = (() => {
     }
   }
 
-  // Start the job and poll it to completion. The caller gets the finished emails and the id, and
-  // may watch the job's state through onTick without knowing the polling cadence.
+  // Start the job and poll it to completion.
   async function generate(payload, opts = {}) {
     const started = await startGeneration(payload, opts.signal);
     const emails = await pollEmails(started.conversationId, opts);
     return { conversationId: started.conversationId, emails };
   }
-  // A brand kit is workspace-authored data, so it is untrusted input: only the fields below
-  // are read, each is validated here at the boundary, and none of them can reach the app's
-  // own theme tokens. Everything a kit sets lands on the email artifact instead — the one
-  // surface where a customer's brand should outrank Migma's.
+  // A brand kit is workspace-authored data, so it is untrusted input.
   const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
-  // Font stacks reach two places: an inline style attribute in the exported HTML, and a custom
-  // property on the preview element. Validation is therefore per family rather than over the whole
-  // string — each part must be a bare or single-quoted font name, which admits no character that
-  // could close an attribute ("), end or open a declaration (; { }), call a function (url(,
-  // expression(), name a scheme (javascript:), open a tag (< >) or escape out of any of them (\).
-  // A stack with one bad family is rejected whole rather than repaired, because a repaired stack is
-  // a guess about what a workspace meant.
+  // Font stacks reach two places.
   const FAMILY = /^(?:'[\w\s-]{1,48}'|[\w-][\w\s-]{0,47})$/;
   const LOCALE = /^[a-z]{2}(-[a-z0-9]{2,8})?$/i;
 
@@ -432,8 +386,7 @@ Migma.api = (() => {
     const s = String(value == null ? "" : value).replace(/"/g, "'").trim();
     if (!s || s.length > 120) return "";
     const parts = s.split(",").map(p => p.trim());
-    // Rewritten from the parts rather than returned as received, so the stored form is the
-    // canonical one and normalising it again is a no-op.
+    // Rewritten from the parts rather than returned as received, so the stored form is the canonical one and normalising it again is a no-op.
     return parts.length <= 8 && parts.every(p => FAMILY.test(p)) ? parts.join(", ") : "";
   };
 
@@ -453,8 +406,7 @@ Migma.api = (() => {
     return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
   };
 
-  // No customer palette may produce an unreadable email, so a requested text colour that
-  // misses AA against its own background is replaced by whichever end of the scale clears it.
+  // No customer palette may produce an unreadable email, so a requested text colour that misses AA against its own background is replaced by whichever end of the scale clears it.
   const readable = (on, wanted) =>
     contrast(on, wanted) >= 4.5 ? wanted : luminance(on) > 0.45 ? "#18181b" : "#ffffff";
 
@@ -464,9 +416,7 @@ Migma.api = (() => {
     const b = rgb(to);
     return "#" + a.map((v, i) => pad(Math.round(v + (b[i] - v) * t))).join("");
   };
-  // A kit is stored in its normalised form and normalised again on read, so every fallback chain
-  // also accepts this function's own output — otherwise a round trip would drop the fonts and
-  // reset a deliberately dark CTA label back to white.
+  // A kit is stored in its normalised form and normalised again on read, so every fallback chain also accepts this function's own output, otherwise a round trip would drop the fonts and reset a deliberately dark CTA label back to white.
   function normKit(raw) {
     if (!raw || typeof raw !== "object") return null;
     const id = String(raw.id || raw.key || "").slice(0, 64);
@@ -483,8 +433,7 @@ Migma.api = (() => {
       ctaInk: readable(accent, hex(raw.cta_text_color || raw.ctaTextColor || raw.ctaInk, "#ffffff")),
       paper,
       ink,
-      // The tints metrics.js hardcodes for a white email, re-derived against the kit's own
-      // paper so a tinted or dark brand surface keeps the same hierarchy instead of losing it.
+      // The tints metrics.js hardcodes for a white email, re-derived against the kit's own paper so a tinted or dark brand surface keeps the same hierarchy instead of losing it.
       copy: mix(paper, ink, 0.75),
       muted: mix(paper, ink, 0.62),
       line: mix(paper, ink, 0.12),
@@ -499,11 +448,7 @@ Migma.api = (() => {
     };
   }
 
-  // Brand import is a project operation: Migma reads the site and returns the brand it inferred.
-  // That inferred brand is still workspace-authored, untrusted input, so it goes through the same
-  // normKit boundary as anything else before it can touch the email artifact. The proxy enforces
-  // https and strips credentials from the URL; the id and name fall back to the host so a kit is
-  // always identifiable even when the import names neither.
+  // Brand import is a project operation.
   async function importBrand(url, signal) {
     const clean = String(url || "").trim();
     const data = await json(ENDPOINTS.import, { method: "POST", signal, retries: 0, body: { url: clean } });
