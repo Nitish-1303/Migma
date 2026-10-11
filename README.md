@@ -1,5 +1,27 @@
 # Migma × Spotify, Music Campaign Automator
 
+Migma has plugins for ChatGPT, Claude and Slack. Nothing for the 600M-user music industry. This is
+that plugin, designed and running.
+
+[Live storyboard](TODO-VERCEL-LINK)
+
+![60-second run of the live plugin](TODO-DEMO-GIF)
+
+## Why Migma should care
+
+- Music is the biggest creator economy, and it has no owned-channel tooling.
+- Artists rent their audience from Spotify; they can't email it directly.
+- The plugin turns a listening surface (playlist, track, show, roster) into an email campaign.
+- Every campaign type reuses Migma's existing generate-and-poll pipeline.
+- All real Spotify data, one honest mock.
+
+Everything except final generation runs against the real Spotify API today. Give me sandbox API
+access and this runs against Migma tomorrow.
+
+---
+
+## What this is
+
 Turn a Spotify surface (playlist, track, show, roster) into a ready-to-send Migma campaign without
 leaving the client.
 
