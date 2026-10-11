@@ -194,7 +194,7 @@ test("no external font or brand-asset URLs are referenced from the plugin", () =
   assert.ok(!/url\(\s*['"]?https?:\/\//i.test(css), "style.css url() must not fetch an external resource");
   assert.ok(css.includes('url("migma-app-logo-512.webp")'), "the mark should be the bundled logo");
   // The bundled assets exist on disk.
-  for (const asset of ["migma-app-logo-512.webp", "migma-app-icon-512.webp", "migma-wordmark-white.png", "MigmaAIDisplayTitle-Bold.woff2"]) {
+  for (const asset of ["migma-app-logo-512.webp", "migma-app-icon-512.webp", "migma-wordmark-white.png", "migma-logo-animated.gif", "MigmaAIDisplayTitle-Bold.woff2"]) {
     assert.ok(fs.existsSync(path.join(dir, asset)), `${asset} must be bundled`);
   }
 });
