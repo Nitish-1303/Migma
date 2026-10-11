@@ -257,3 +257,18 @@ test("the watch triggers once on a new release id and not on the same id", () =>
   assert.equal(M.metrics.isNewRelease(latest, "old"), true);
   assert.equal(M.metrics.isNewRelease(latest, ""), false);
 });
+
+test("the email links track artwork to a preview when present, else to spotify", () => {
+  const digest = {
+    playlist: { id: "pl", name: "Mix", owner: "DJ", image: "" },
+    trackCount: 2,
+    tracks: [
+      { name: "A", artist: "X", duration: "3:00", image: "https://img/a", preview: "https://p.scdn.co/mp3-preview/abc", url: "https://open.spotify.com/track/aaa" },
+      { name: "B", artist: "Y", duration: "2:30", image: "https://img/b", preview: "", url: "https://open.spotify.com/track/bbb" }
+    ]
+  };
+  const html = M.compose.emailHtml({ digest, idea: null, body: "Hi", settings: Object.assign({}, M.store.get(), { includeTracklist: true }) });
+  assert.ok(html.includes("https://p.scdn.co/mp3-preview/abc"), "preview link present");
+  assert.ok(html.includes("https://open.spotify.com/track/bbb"), "spotify fallback present");
+  assert.doesNotMatch(html, /href=""/, "no empty player link");
+});
