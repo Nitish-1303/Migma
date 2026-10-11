@@ -159,6 +159,11 @@ is no background daemon — it polls the artist's releases on open and at most o
 baselines on the first poll, and shows a one-time banner when a newer release id appears. The banner's
 only action drafts an artist announcement; nothing is ever sent automatically.
 
+**Preview player.** When a track carries a Spotify `preview_url`, the exported email's artwork links to
+that 30-second preview, badged with a play glyph; a track without one links to it on open.spotify.com
+instead. Email clients routinely block `<audio>`, so the thumbnail is the link — never a play button
+over a dead link. It applies to every campaign type whose email carries tracks.
+
 ## Brand and languages
 
 **Brand import.** The brief pane imports a brand from a site through Migma's real project-import route
