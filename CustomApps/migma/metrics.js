@@ -177,21 +177,70 @@ Migma.metrics = (() => {
     };
   }
 
-  return { digest, trackDigest, clock };
+  // Album objects → the releases within the last `days`, newest first, de-duplicated. Spotify
+  // dates come as YYYY, YYYY-MM or YYYY-MM-DD, so each is normalised before the window is applied.
+  function releaseTime(rd) {
+    const s = String(rd || "");
+    const iso = s.length === 4 ? `${s}-01-01` : s.length === 7 ? `${s}-01` : s;
+    return Date.parse(iso) || 0;
+  }
+  function mapAlbum(a) {
+    return {
+      id: (a && a.id) || "",
+      title: (a && a.name) || "Untitled",
+      artist: ((a && a.artists) || []).map(x => x && x.name).filter(Boolean).join(", ") || "Unknown",
+      date: String((a && a.release_date) || ""),
+      image: ((((a || {}).images) || [])[0] || {}).url || "",
+      url: ((a && a.external_urls) || {}).spotify || ""
+    };
+  }
+  function recentReleases(albums, days) {
+    const windowMs = (days || 7) * 24 * 3600 * 1000;
+    const now = Date.now();
+    const seen = new Set();
+    const out = [];
+    for (const a of albums || []) {
+      const t = releaseTime(a && a.release_date);
+      if (!t || now - t > windowMs || t > now + 86400000) continue;
+      const m = mapAlbum(a);
+      if (m.id && seen.has(m.id)) continue;
+      if (m.id) seen.add(m.id);
+      out.push(m);
+    }
+    return out.sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+  }
+  // The single newest release regardless of age — what the watch compares against last time.
+  function latestRelease(albums) {
+    const mapped = (albums || []).map(mapAlbum).filter(x => x.id);
+    mapped.sort((x, y) => releaseTime(y.date) - releaseTime(x.date));
+    return mapped[0] || null;
+  }
+  // A new release is a latest whose id differs from the one last seen — and only once a baseline
+  // exists, so the first poll of a watch does not fire a banner for an already-published release.
+  function isNewRelease(latest, seen) {
+    return Boolean(latest && latest.id && seen && latest.id !== seen);
+  }
+
+  return { digest, trackDigest, recentReleases, latestRelease, isNewRelease, clock };
 })();
 
 Migma.compose = (() => {
   const LENGTHS = { short: "roughly 90 words", standard: "roughly 180 words", long: "roughly 320 words" };
 
-  function brief(digest, idea, settings) {
+  // `context` carries the type-specific inputs a brief needs beyond the digest: a pitch target, a
+  // date list, a release list. The playlist and artist briefs ignore it.
+  function brief(digest, idea, settings, context) {
     const d = digest;
+    const ctx = context || {};
+    const len = LENGTHS[settings.length] || LENGTHS.standard;
+
     // Artist announcement: a fan-release email in the artist's own voice, built from either a
     // single track or a release playlist. Same digest shape, different framing.
     if (settings.campaignType === "artist_announce") {
       const artist = (d.topArtists[0] && d.topArtists[0].name) || d.playlist.owner || "the artist";
       const release = d.single ? `the new track "${d.playlist.name}"` : `the release "${d.playlist.name}"`;
-      const lines = [
-        `Write a ${settings.tone}, ${LENGTHS[settings.length] || LENGTHS.standard} fan announcement email from ${artist} about ${release}.`,
+      return [
+        `Write a ${settings.tone}, ${len} fan announcement email from ${artist} about ${release}.`,
         d.single
           ? `Track: "${d.playlist.name}" by ${artist}${d.eras.length ? `, released ${d.eras[0].label}` : ""}, ${d.runtimeLong}.`
           : `Release: ${d.trackCount} tracks, ${d.runtimeLong}, average popularity ${d.avgPopularity}/100.`,
@@ -200,23 +249,67 @@ Migma.compose = (() => {
         "Write to existing fans in the artist's own voice; invite them to listen and share, warmly and without hype.",
         `Call to action: "${settings.ctaLabel}".`,
         "Do not invent song, album or artist names beyond what is given."
-      ];
-      return lines.filter(Boolean).join("\n");
+      ].filter(Boolean).join("\n");
     }
 
-    const lines = [
-      `Write a ${settings.tone}, ${LENGTHS[settings.length] || LENGTHS.standard} campaign email for the Spotify playlist "${d.playlist.name}".`,
+    // Playlist pitch: a professional note from the artist to a curator, not a fan email. It names
+    // the track, why it fits the target, and references the target's own tracks.
+    if (settings.campaignType === "playlist_pitch") {
+      const t = ctx.target || {};
+      const artist = (d.topArtists[0] && d.topArtists[0].name) || d.playlist.owner || "the artist";
+      const titles = (t.trackTitles || []).slice(0, 4);
+      return [
+        `Write a ${settings.tone}, ${len} pitch email from ${artist} to the curator of the playlist "${t.name || "the target playlist"}".`,
+        `Pitching the track "${d.playlist.name}" by ${artist}${d.eras.length ? `, released ${d.eras[0].label}` : ""}.`,
+        d.genres.length ? `The track's sound: ${d.genres.slice(0, 4).map(g => g.name).join(", ")}.` : "",
+        t.description ? `The playlist describes itself as: "${t.description}".` : "",
+        titles.length
+          ? `It already features tracks like ${titles.map(x => `"${x}"`).join(", ")} — explain why this track sits naturally alongside them.`
+          : "",
+        "Keep it short and respectful: one clear reason it fits, one listening link, a polite close. This is a professional pitch to a curator, never a fan blast.",
+        `Call to action: "${settings.ctaLabel}".`,
+        "Do not invent names beyond what is given."
+      ].filter(Boolean).join("\n");
+    }
+
+    // Show promo: a live-date announcement to fans, one ticket CTA per date.
+    if (settings.campaignType === "show_promo") {
+      const artist = ctx.artist || d.playlist.owner || "the artist";
+      const dates = (ctx.dates || []).filter(x => x && (x.city || x.venue || x.date));
+      return [
+        `Write a ${settings.tone}, ${len} live-show announcement email from ${artist} to their fans.`,
+        dates.length ? "Dates to announce, in this order:" : "No dates entered yet.",
+        ...dates.map(x => `- ${[x.city, x.venue, x.date].filter(Boolean).join(", ")}${x.ticket ? ` — tickets: ${x.ticket}` : ""}`),
+        "Give each date its own line with a clear ticket call to action. Warm and direct, no hype.",
+        `Primary call to action: "${settings.ctaLabel}".`,
+        "Do not invent dates, venues or cities beyond those listed."
+      ].filter(Boolean).join("\n");
+    }
+
+    // Label digest: a weekly round-up of new releases across a roster, in the label's voice.
+    if (settings.campaignType === "label_digest") {
+      const label = ctx.label || "the label";
+      const releases = ctx.releases || [];
+      return [
+        `Write a ${settings.tone}, ${len} weekly new-release digest email from ${label} to its subscribers.`,
+        releases.length ? "This week's releases:" : "No new releases in the last 7 days.",
+        ...releases.map(r => `- "${r.title}" by ${r.artist}${r.date ? ` (${r.date})` : ""}`),
+        "Introduce the week briefly, then list each release with a listening link. Use the label's voice, not any single artist's.",
+        `Call to action: "${settings.ctaLabel}".`,
+        "List only the releases given; do not invent any."
+      ].filter(Boolean).join("\n");
+    }
+
+    return [
+      `Write a ${settings.tone}, ${len} campaign email for the Spotify playlist "${d.playlist.name}".`,
       `Playlist: ${d.trackCount} tracks, ${d.artistCount} artists, ${d.runtimeLong}, average popularity ${d.avgPopularity}/100.`,
       d.genres.length ? `Dominant genres: ${d.genres.slice(0, 4).map(g => `${g.name} (${g.share}%)`).join(", ")}.` : "",
       d.eras.length ? `Release era: ${d.eras.slice(0, 3).map(e => `${e.label} ${e.share}%`).join(", ")}.` : "",
       d.tags.length ? `Audience reads as: ${d.tags.join(", ")}.` : "",
       d.topArtists.length ? `Most represented artists: ${d.topArtists.map(a => a.name).join(", ")}.` : "",
-      idea ? `Angle: ${idea.angle}. Subject line: "${idea.subject}".` : "",
-      idea && idea.segment ? `Segment: ${idea.segment}.` : "",
       `Call to action: "${settings.ctaLabel}".`,
       "Do not invent track or artist names — the tracklist is inserted separately."
-    ];
-    return lines.filter(Boolean).join("\n");
+    ].filter(Boolean).join("\n");
   }
 
   const esc = s =>
