@@ -63,7 +63,7 @@ Migma.api = (() => {
 
   const PLAYLIST_FIELDS = "id,name,description,followers(total),images,owner(display_name),tracks(total)";
   const TRACK_FIELDS =
-    "total,items(track(id,name,duration_ms,popularity,explicit,album(name,release_date,images),artists(id,name)))";
+    "total,items(track(id,name,duration_ms,popularity,explicit,preview_url,external_urls,album(name,release_date,images),artists(id,name)))";
 
   function playlist(id) {
     return sp(`/playlists/${id}?fields=${encodeURIComponent(PLAYLIST_FIELDS)}`);

@@ -115,7 +115,9 @@ Migma.metrics = (() => {
         name: t.name,
         artist: ((t.artists || [])[0] || {}).name || "",
         duration: clock(t.duration_ms || 0),
-        image: ((((t.album || {}).images) || [])[2] || (((t.album || {}).images) || [])[0] || {}).url || ""
+        image: ((((t.album || {}).images) || [])[2] || (((t.album || {}).images) || [])[0] || {}).url || "",
+        preview: t.preview_url || "",
+        url: ((t.external_urls || {}).spotify) || ""
       }))
     };
   }
@@ -170,7 +172,9 @@ Migma.metrics = (() => {
           name: track.name,
           artist: primary,
           duration: clock(track.duration_ms || 0),
-          image: ((((track.album || {}).images) || [])[2] || (((track.album || {}).images) || [])[0] || {}).url || ""
+          image: ((((track.album || {}).images) || [])[2] || (((track.album || {}).images) || [])[0] || {}).url || "",
+          preview: track.preview_url || "",
+          url: ((track.external_urls || {}).spotify) || ""
         }
       ],
       single: true
@@ -343,11 +347,25 @@ Migma.compose = (() => {
       )
       .join("");
 
+    // Email clients routinely block <audio>, so a 30-second preview is surfaced as a thumbnail that
+    // links out: to Spotify's preview mp3 when the track has one, otherwise to the track on
+    // open.spotify.com. A track with neither keeps a plain thumbnail — never a play button over a
+    // dead link.
+    const artCell = t => {
+      const img = `<img src="${esc(t.image)}" width="36" height="36" alt="" style="display:block;border-radius:4px">`;
+      const href = t.preview || t.url;
+      if (!href) return img;
+      const badge = t.preview
+        ? `<span style="position:absolute;left:0;top:0;width:36px;height:36px;line-height:36px;text-align:center;color:#fff;font-size:13px;background:rgba(0,0,0,.35);border-radius:4px">&#9654;</span>`
+        : "";
+      return `<a href="${esc(href)}" style="display:inline-block;position:relative;text-decoration:none">${img}${badge}</a>`;
+    };
+
     const rows = digest.tracks
       .slice(0, 5)
       .map(
         t => `<tr>
-      <td width="44" style="padding:9px 12px"><img src="${esc(t.image)}" width="32" height="32" alt="" style="display:block;border-radius:4px"></td>
+      <td width="48" style="padding:9px 12px">${artCell(t)}</td>
       <td style="padding:9px 0;font:600 13px/1.4 Helvetica,Arial,sans-serif;color:#18181b">${esc(t.name)}<br><span style="font-weight:400;color:#71717a">${esc(t.artist)}</span></td>
       <td align="right" style="padding:9px 12px;font:400 12px Helvetica,Arial,sans-serif;color:#71717a">${esc(t.duration)}</td>
     </tr>`

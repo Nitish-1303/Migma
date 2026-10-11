@@ -894,6 +894,7 @@ window.Migma = window.Migma || {};
                 { key: i, className: "mg-email__row" },
                 h("img", { src: t.image, alt: "", loading: "lazy" }),
                 h("span", null, h("b", null, t.name), h("s", null, t.artist)),
+                t.preview ? h("span", { title: "30-second preview", style: { fontSize: "9px", color: "#71717a", marginRight: "6px" } }, "▶") : null,
                 h("u", null, t.duration)
               )
             )
