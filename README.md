@@ -1,7 +1,7 @@
-# Migma × Spotify
+# Migma × Spotify — Music Campaign Automator
 
-Turn a Spotify playlist — or a track, a release, a tour, a label roster — into a ready-to-send Migma
-email campaign without leaving the desktop client. This repo is three pieces:
+Turn any Spotify surface — playlist, track, show, roster — into a ready-to-send Migma campaign
+without leaving the client. This repo is three pieces:
 
 - **`CustomApps/migma/`** — the Spicetify custom app (the plugin). Pick a source, refine a brief,
   generate through Migma's async job, export clean HTML. See [its README](CustomApps/migma/README.md).
