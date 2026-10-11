@@ -198,3 +198,62 @@ test("no external font or brand-asset URLs are referenced from the plugin", () =
     assert.ok(fs.existsSync(path.join(dir, asset)), `${asset} must be bundled`);
   }
 });
+
+test("pitch brief names the track, the target playlist and its tracks", () => {
+  const td = M.metrics.trackDigest(
+    { id: "t2", name: "Glass Harbor", duration_ms: 200000, popularity: 30, explicit: false, album: { release_date: "2026-02-01", images: [{ url: "x" }] }, artists: [{ id: "a2", name: "Veil" }] },
+    new Map([["a2", { name: "Veil", genres: ["dream pop"] }]])
+  );
+  const brief = M.compose.brief(td, null, { campaignType: "playlist_pitch", tone: "direct", length: "short", ctaLabel: "Give it a listen" }, { target: { name: "Fresh Finds Indie", description: "Weekly indie discoveries", trackTitles: ["Paper Lungs", "Slow Tide"] } });
+  assert.match(brief, /Glass Harbor/);
+  assert.match(brief, /Fresh Finds Indie/);
+  assert.match(brief, /Paper Lungs|Slow Tide/);
+  assert.doesNotMatch(brief, /fan announcement/i);
+});
+
+test("show brief lists every date and its ticket link", () => {
+  const digest = { playlist: { owner: "" }, topArtists: [] };
+  const dates = [
+    { city: "Berlin", venue: "Berghain", date: "2026-11-02", ticket: "https://tix.example/berlin" },
+    { city: "Paris", venue: "La Cigale", date: "2026-11-05", ticket: "https://tix.example/paris" }
+  ];
+  const brief = M.compose.brief(digest, null, { campaignType: "show_promo", tone: "warm", length: "standard", ctaLabel: "Get tickets" }, { artist: "Hale", dates });
+  assert.match(brief, /Hale/);
+  for (const d of dates) {
+    assert.ok(brief.includes(d.city), `brief should name ${d.city}`);
+    assert.ok(brief.includes(d.ticket), `brief should carry ${d.ticket}`);
+  }
+});
+
+test("recentReleases keeps the last 7 days and drops older", () => {
+  const day = 86400000;
+  const iso = ms => new Date(ms).toISOString().slice(0, 10);
+  const albums = [
+    { id: "r1", name: "New One", artists: [{ name: "A" }], release_date: iso(Date.now() - 2 * day), images: [{ url: "x" }], external_urls: { spotify: "u1" } },
+    { id: "r2", name: "Old One", artists: [{ name: "B" }], release_date: iso(Date.now() - 8 * day), images: [], external_urls: {} }
+  ];
+  const rel = M.metrics.recentReleases(albums, 7);
+  assert.equal(rel.length, 1);
+  assert.equal(rel[0].id, "r1");
+});
+
+test("label brief lists the given releases, and an empty roster is honest", () => {
+  const brief = M.compose.brief({ playlist: { owner: "" } }, null, { campaignType: "label_digest", tone: "editorial", length: "standard", ctaLabel: "Listen" }, { label: "Night Tapes", releases: [{ title: "New One", artist: "A", date: "2026-10-10" }] });
+  assert.match(brief, /Night Tapes/);
+  assert.match(brief, /New One/);
+  assert.equal(M.metrics.recentReleases([], 7).length, 0);
+  const empty = M.compose.brief({ playlist: { owner: "" } }, null, { campaignType: "label_digest", tone: "warm", length: "short", ctaLabel: "Listen" }, { label: "X", releases: [] });
+  assert.match(empty, /No new releases/i);
+});
+
+test("the watch triggers once on a new release id and not on the same id", () => {
+  const albums = [
+    { id: "old", name: "Old", artists: [{ name: "A" }], release_date: "2026-01-01" },
+    { id: "new", name: "New", artists: [{ name: "A" }], release_date: "2026-10-01" }
+  ];
+  const latest = M.metrics.latestRelease(albums);
+  assert.equal(latest.id, "new");
+  assert.equal(M.metrics.isNewRelease(latest, "new"), false);
+  assert.equal(M.metrics.isNewRelease(latest, "old"), true);
+  assert.equal(M.metrics.isNewRelease(latest, ""), false);
+});
