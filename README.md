@@ -1,4 +1,4 @@
-# Migma × Spotify, Music Campaign Automator
+# Migma × Spotify - Music Campaign Automator
 
 Migma has plugins for ChatGPT, Claude and Slack. Nothing for the 600M-user music industry. This is
 that plugin, designed and running.
