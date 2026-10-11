@@ -108,6 +108,25 @@ Migma.api = (() => {
     return sp(`/tracks/${id}`);
   }
 
+  // An artist's releases, newest filtered client-side. Used by the label digest and the
+  // new-release watch. include_groups keeps it to the artist's own singles and albums.
+  async function artistAlbums(id) {
+    const res = await sp(`/artists/${encodeURIComponent(id)}/albums?include_groups=single,album&limit=50`);
+    return (res.items || []).filter(Boolean);
+  }
+
+  // A few track titles from a playlist, for the pitch brief's "already features…" line. One page,
+  // names only — the pitch needs a sample, not the whole tracklist.
+  async function playlistTitles(id, limit = 6) {
+    const page = await sp(
+      `/playlists/${encodeURIComponent(id)}/tracks?limit=30&fields=${encodeURIComponent("items(track(name))")}`
+    );
+    return (page.items || [])
+      .map(i => i && i.track && i.track.name)
+      .filter(Boolean)
+      .slice(0, limit);
+  }
+
   const CLIENT = "spicetify-migma";
 
   // The proxy holds the workspace key and signs with it, so nothing in this client ever handles one.
@@ -512,6 +531,8 @@ Migma.api = (() => {
     artists,
     myPlaylists,
     track,
+    artistAlbums,
+    playlistTitles,
     projects,
     generate,
     pollEmails,
