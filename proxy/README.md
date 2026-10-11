@@ -172,26 +172,32 @@ exists so a correction is a restart rather than a patch. Note also what it forec
 placement, whether a message lands in the inbox rather than a spam folder. It is not a
 conversion estimate, and a surface that reports a number to a user should not conflate them.
 
-## Before this bridge carries the plugin
+## API alignment
 
-Two gaps sit on the client side of the hop, not in this service.
+The client and this proxy were brought into line with the published API; neither names a route Migma
+does not document.
 
-**Generation is a job, not a stream.** Upstream answers `POST /projects/emails/generate` with
-`{ conversationId, status: "pending" }`, and the caller polls
-`GET /projects/emails/{conversationId}/status` until it reads `completed`, at which point
-`data.result.emails[]` carries `{ emailId, subject, html, screenshotUrl }` per language. The
-plugin reads that route as `text/event-stream` and parses `data:` lines, so the generate bridge
-cannot complete until the client polls instead. No polling interval is published, so this proxy
-sets none — it reports upstream's status verbatim and lets the client pace itself, because
-inventing a cadence here would hide the fact that nobody has committed to one. The only timing
-upstream does commit to is 30–60 seconds for a brand import.
+**Generation is an asynchronous job, and the client polls it.** Upstream answers
+`POST /projects/emails/generate` with `{ conversationId, status: "pending" }`, and the client polls
+`GET /projects/emails/{conversationId}/status` with exponential backoff until it reads `completed`, at
+which point `data.result.emails[]` carries `{ emailId, subject, html, screenshotUrl }` per language. No
+polling interval is published, so this proxy sets none — it reports upstream's status verbatim and lets
+the client pace itself, because inventing a cadence here would hide the fact that nobody has committed
+to one. The only timing upstream does commit to is 30–60 seconds for a brand import.
 
-**Most of the plugin's endpoints have no upstream counterpart.** Of the paths the client asks
-for, `/projects` is the one that matches the published API. `/campaigns/ideas`,
-`/campaigns/generate`, `/campaigns/score`, `/campaigns/translate`, `/workspaces/reviewers`,
-`/workspaces/comments` and `/workspaces/brand-kits` are not routes on `api.migma.ai/v1`, and
-this proxy deliberately does not invent them. Adding a passthrough for a path that does not
-exist would turn a missing feature into a 404 at runtime instead of a decision made in the open.
+**Only published routes are exposed, and the client asks only for those.** The paths the plugin once
+reached for — `/campaigns/ideas`, `/campaigns/generate`, `/campaigns/score`, `/campaigns/translate`,
+`/workspaces/reviewers`, `/workspaces/comments`, `/workspaces/brand-kits` — are not routes on
+`api.migma.ai/v1`, so neither side names them. The capabilities behind them render a *pending Migma
+API* state in the plugin instead of a runtime 404, and the test suite asserts those paths 404 here so
+the contract cannot drift. A brand is a project, imported with `POST /v1/projects/import`;
+multi-language output rides `languages[]` on generate rather than a separate translate call.
+
+**Unverified in a live Spicetify client.** Two things on the client side of the hop have not been
+exercised against a running Spotify client: CORS from `https://xpui.app.spotify.com` reaching this
+proxy end to end, and how the Spotify session token is read out of Spicetify before it is posted to
+`POST /session`. Both are the plugin's to confirm; this service's job is only to answer that origin and
+validate whatever token arrives.
 
 ## Deploy
 
@@ -220,8 +226,9 @@ npm test
 Zero-dependency `node:test`. The suite covers session forgery, tampering and expiry; the CORS
 allowlist including the `X-Migma-Client` requirement; the input guards; router traversal
 refusal; and the service end to end over a real socket — preflight, the 401/403 gate, 404/405,
-the body cap and the mint limit. None of it needs a Migma key or a network, because what it
-proves is that the gate closes, not that Migma replies.
+the body cap, the mint limit, and that the invented `/campaigns/*` and `/workspaces/*` routes
+answer 404. None of it needs a Migma key or a network, because what it proves is that the gate
+closes, not that Migma replies.
 
 
 

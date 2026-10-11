@@ -1,18 +1,20 @@
-# Migma for Spotify
+# MigmaAI for Spotify
 
-Turns a Spotify playlist into a ready-to-send Migma email campaign without leaving the desktop client.
-Reads the playlist's metadata, derives an audience digest, asks Migma for campaign angles, streams the
-finished email into a live preview, then saves it as a draft in a Migma project.
+Turns a Spotify playlist — or a single track — into a ready-to-send Migma email campaign without
+leaving the desktop client. It reads the source's metadata, derives an audience digest, writes a
+brief from it, and sends that brief to Migma's **asynchronous email-generation job**. When the job
+completes it returns one email per language, which the plugin previews and exports as clean HTML.
 
-The whole plugin is three steps — **Pick a playlist → Choose & refine → Save & export** — and each one is
-a single surface that changes what it shows as the work progresses rather than a screen that hands off to
-the next. Progress is one continuous rail under the header: a filled track, the three names beneath it,
-and a step already behind you is a button back to it.
+The whole plugin is three steps — **Pick → Choose & refine → Review & export** — and each one is a
+single surface that changes what it shows as the work progresses rather than a screen that hands off
+to the next. Progress is one continuous rail under the header: a filled track, the three names
+beneath it, and a step already behind you is a button back to it.
 
-An enterprise workspace adds the parts of a campaign that are not copy. Step two takes a team comment
-thread, a brand kit that repaints the artifact in the workspace's own typography and colour, and
-secondary-language variants of the generated copy; step three takes the reviewer assignment and a
-pre-flight score read before anything is written to the workspace.
+Two things it deliberately does **not** do: it stores no Migma key (a proxy you run holds it), and it
+calls no Migma route that Migma does not publish. Capabilities the plugin has a surface for but Migma
+has not shipped an endpoint for — suggested angles, draft scoring, on-demand translation, reviewer
+assignment, comment threads — render a plain *pending Migma API* state instead of calling a route
+that does not exist. See [API alignment](#api-alignment).
 
 Ships as a Spicetify **custom app** (sidebar route) plus a bundled **extension** (topbar button and
 playlist context-menu item).
@@ -37,46 +39,46 @@ spicetify apply
 ```
 
 `manifest.json` loads `store.js`, `api.js`, `metrics.js` and `ui.js` before `index.js`, and registers
-`extension.js` as an extension so the topbar button exists on every page, not just inside the app.
+`extension.js` as an extension so the topbar button exists on every page, not just inside the app. The
+folder name stays `migma` (and the route stays `/migma`); the app's display name is **MigmaAI**.
 
 ## Entry points
 
 | Surface | Behaviour |
 | --- | --- |
 | Sidebar | Custom-app route at `/migma` |
-| Topbar button | Reads "Campaign" on a playlist page, "Migma" everywhere else |
-| Playlist context menu | "Create Migma campaign" |
+| Topbar button | Reads "Campaign" on a playlist page, "MigmaAI" everywhere else |
+| Playlist context menu | "Create MigmaAI campaign" |
 
 Both the topbar button and the context-menu item call `open(uri, direct)`, which records an explicit
 intent flag through `store.setHandoff(uri, direct)`. A `direct` handoff means the user aimed at that
 playlist on purpose, so step one skips its playlist list and opens straight on that playlist's audience.
-Anything the app merely infers — the current route, the last playlist visited, the playing context — only
-preselects the playlist in the list and still waits to be chosen. The handoff is consumed once, so a
-refresh does not replay it.
+Anything the app merely infers — the current route, the last playlist visited, the playing context —
+only preselects the playlist in the list and still waits to be chosen. The handoff is consumed once, so
+a refresh does not replay it.
 
 ## First run
 
-Open **Migma** in the sidebar, enter the URL of your proxy, press **Check connection**, pick a project, then
-**Connect**. An unconnected client is already standing on step one — the connect form *is* that step's
-surface, so there is no separate setup screen and the rail reads the same either way. The proxy address and
-the defaults are kept in the Spotify client's local storage under `migma:settings`. No Migma key is, because
-the plugin never receives one — see [The Migma API](#the-migma-api) for what the proxy holds instead, and why.
+Open **MigmaAI** in the sidebar, enter the URL of your proxy, press **Check connection**, pick a
+project, then **Connect**. An unconnected client is already standing on step one — the connect form
+*is* that step's surface, so there is no separate setup screen and the rail reads the same either way.
+The proxy address and the defaults are kept in the Spotify client's local storage under
+`migma:settings`. No Migma key is, because the plugin never receives one — see
+[Why no key is stored here](#why-no-key-is-stored-here).
 
-Two further keys are caches, both short-lived and both discardable: `migma:digests` holds computed audience
-digests so re-opening a playlist does not re-read it, and `migma:workspace` holds the reviewer and brand-kit
-lists so the canvas can paint before the network answers. Digests keep 12 playlists for 30 minutes, workspace
-lists 8 entries for 10 minutes, and both are ordered by when they were last written rather than when they were
-first seen — so the playlist you keep returning to is the last one evicted, not an arbitrary one. Expired
-entries are dropped on the next write to the same cache, so neither grows while the app is closed.
+One further key is a cache: `migma:digests` holds computed audience digests (playlists and single
+tracks) so re-opening a source does not re-read it. It keeps 12 entries for 30 minutes, ordered by
+when they were last written rather than first seen — so the source you keep returning to is the last
+one evicted. Expired entries are dropped on the next write, so it does not grow while the app is closed.
 
 Local storage is finite and shared with the client itself, so a cache write is never allowed to fail a
-campaign. A full store drops both caches and retries once; if the write still will not land it is abandoned
-without a word and the plugin runs uncached. Settings outrank both caches and are the one write permitted to
-evict them.
+campaign. A full store drops the digest cache and retries once; if the write still will not land it is
+abandoned without a word and the plugin runs uncached. Settings outrank the cache and are the one write
+permitted to evict it.
 
-Clear it any time with **Settings → Disconnect**. That drops the in-memory proxy session along with
-`migma:workspace`, because reviewers and brand kits belong to the session that fetched them. Appearance is a
-display preference rather than a credential, so it survives; so does the digest cache, which is derived from
+Clear it any time with **Settings → Disconnect**. That drops the in-memory proxy session and the
+imported brand and copy defaults, because they belong to the connection. Appearance is a display
+preference rather than a credential, so it survives; so does the digest cache, which is derived from
 Spotify and holds nothing of Migma's.
 
 ## Files
@@ -87,366 +89,229 @@ Spotify and holds nothing of Migma's.
 | `extension.js` | Topbar button, playlist context-menu item, route tracking |
 | `index.js` | App shell, three-step state machine, every surface, `render()` |
 | `ui.js` | Presentational atoms over `Spicetify.React.createElement` |
-| `api.js` | Spotify reads via `CosmosAsync`, Migma client with retry and SSE streaming, workspace and scoring calls |
-| `metrics.js` | Playlist → audience digest, brief text, export-ready email HTML |
-| `store.js` | Settings, digest cache, workspace cache, context-menu handoff |
+| `api.js` | Spotify reads via `CosmosAsync`; the Migma client — documented routes only, retry, the async generate-and-poll job, brand import, kit sanitisation |
+| `metrics.js` | Source → audience digest (playlist or single track), brief text, export-ready email HTML |
+| `store.js` | Settings, digest cache, context-menu handoff |
 | `style.css` | Everything visual; both theme token sets, the email token set, and every rule |
 | `MigmaAIDisplayTitle-Bold.woff2` | Migma's display face, used for every heading |
 | `MigmaAIDisplayTitle-BoldItalic.woff2` | Italic cut of the same face |
+| `test/client.test.cjs` | Headless integration tests (`node --test CustomApps/migma/test/client.test.cjs`) |
 
 ## The three steps
 
-`pick → refine → export`. Settings sits outside the sequence and remembers the step it was opened from, so
-closing it gives that step back rather than restarting the flow.
+`pick → refine → export`. Settings sits outside the sequence and remembers the step it was opened
+from, so closing it gives that step back rather than restarting the flow.
 
-**Pick a playlist** is onboarding, source detection and the audience digest on one surface. Unconnected, it
-is the connect form. Connected, it is the playlist that is on screen right now plus a searchable list of
-your own — and choosing one *is* what starts the read, so nothing sits between picking a playlist and
-watching its audience fill in beneath the name. `reading` is the flag that keeps the list from coming back
-in the gap between the choice and the digest. The line naming the chosen playlist carries **Change**, which
-invalidates the read in flight so a late digest cannot resurrect the surface it belonged to.
+**Pick** is onboarding, source selection and the audience digest on one surface. Unconnected, it is the
+connect form. Connected, it carries a **campaign-type** toggle — *Playlist campaign* or *Artist
+announcement* — then the source. For a playlist campaign it is the playlist on screen now plus a
+searchable list of your own; choosing one *is* what starts the read. For an artist announcement the
+same picker applies, and a single track can be pasted as a Spotify link or taken from the track playing
+now. `reading` keeps the list from coming back in the gap between the choice and the digest, and the
+line naming the chosen source carries **Change**, which invalidates the read in flight so a late digest
+cannot resurrect the surface it belonged to.
 
-**Choose & refine** is the angles, the brief and the streaming preview in one pane. Angles arrive in the
-first tab, the brief is seeded from the one Migma ranked first, and choosing a different angle re-seeds it
-without leaving the surface — the live preview beside them never goes away. The third tab is the team
-thread.
+**Choose & refine** is the brief and the preview in one pane. The brief is seeded from the digest and
+the campaign type, and tracks tone, length and CTA until you edit it by hand. **Generate** starts
+Migma's asynchronous job and polls it to completion; the preview fills when the emails arrive. Extra
+languages are chosen here and returned per language, so the preview switches between them without a
+second request. The pane also carries **Angles** and **Review** tabs — both render a *pending Migma
+API* state, because Migma publishes no endpoint for either (see [API alignment](#api-alignment)).
 
-**Save & export** scores the campaign on the way in, takes the reviewer assignment, then saves. Once the
-draft exists the step becomes its receipt — what was saved, where it went, and the two exports that never
-touch the workspace. A saved draft also closes the rail to backward jumps, because a receipt describes copy
-that has already left: the way on from it is **Create another**.
+**Review & export** is the artifact's receipt. Deliverability scoring would belong here, but Migma
+publishes no endpoint for it, so the surface says so plainly rather than show a number it cannot stand
+behind. The generated email is the deliverable: **Copy HTML** and **Download .html** hand back Migma's
+own markup verbatim, and a preview image is linked when the job returns one. **Finish** closes the
+sequence; the way on from it is **Create another**.
 
 Backward movement is the rail's job alone. It offers a step already finished and never one not yet
-reached, and leaving a step cancels whatever that step had asked for. A back-jump to step one taken to
-re-read the audience does not cost the copy already written: while angles exist, step one's forward action
-is a way back to them rather than a second request to Migma.
+reached, and a generation or brand import in flight — and a finished export — close it to jumps,
+because the work in flight belongs to its step and the receipt describes copy already made.
 
-## Enterprise surfaces
+## Campaign types
 
-All four are optional capabilities. A workspace that exposes none of them still reaches a saved draft
-through `pick → refine → export` unchanged — a failed lookup degrades to an empty list and is reported in
-the canvas bar, never in the error view that would discard the draft. A lookup the app itself cancelled is
-not a failed one and says nothing: leaving the canvas mid-request must not leave a note claiming the plan
-lacks a feature it has.
+The pick step's toggle chooses what the campaign is built from. Both types share the same
+generate-and-poll pipeline, languages and export; only the brief template differs.
 
-**Review.** Step two's pane carries **Angles**, **Brief** and **Review** tabs. Review holds a comment
-thread keyed on the playlist and the chosen angle, so switching angle loads that angle's own notes; the
-reviewer select itself lives in step three, because who the draft is handed to is settled at the hand-off
-rather than while the copy is being written. A posted comment joins the feed immediately and keeps its
-text whatever the network does: an accepted note takes the server's id and timestamp, a rejected one is
-marked *not sent* and offers **Send again**. Notes still carrying a local state survive a refetch rather
-than being replaced by a thread that does not contain them. A workspace without a thread endpoint says so
-once and keeps the notes in the window.
+- **Playlist campaign** — the flagship. A playlist's audience, drafted into a campaign email: tone,
+  length and CTA over a brief built from the digest's genres, eras, popularity and tags.
+- **Artist announcement** — a fan-release email in the artist's own voice, sourced from a playlist or a
+  single track. A track is read with `GET /v1/tracks/{id}` and reduced by `metrics.trackDigest` to the
+  same digest shape a playlist produces, so the preview, brief and export need no special case.
 
-**Pre-flight.** Entering step three calls `/campaigns/score`, which returns a conversion probability, a
-peak listening window, and the factors that moved the number. If the workspace exposes no scorer, the same
-card is produced by a local model over the digest's own signals — followers, track and artist count,
-popularity spread, genre concentration, explicit share, runtime, subject length, copy length — and the card
-says which of the two it is. The local model is deterministic: the same digest and brief always produce the
-same number, and nothing about it is random or time-dependent.
+## Brand and languages
 
-**Brand kits.** Step two's header carries a kit select fed by `/workspaces/brand-kits`. A kit repaints the
-preview and the exported HTML — paper, ink, copy, muted, rules, footer, CTA fill and label, display and
-body font stacks — and replaces the brand-colour row in the brief with the kit's own swatch, since a kit's
-accent overrides that field on export and a picker left beside it would edit nothing. Kits are
-workspace-authored input and are treated as untrusted: every
-colour must be a three- or six-digit hex and nothing else, so a `var()` reference or a value trailing a
-second declaration falls back to the token it was meant to replace; font stacks are read one family at a
-time against a whitelist, where a family is a bare name or a fully quoted one and at most eight may appear
-in 120 characters, which leaves no room for a `url()`, a scheme, an unbalanced quote, a comment, a brace or
-a semicolon; locales must match a language-tag pattern; and an ink that fails 4.5:1 against its own paper is
-re-derived rather than honoured. One rejected family rejects the whole stack rather than silently shipping a
-partial one. A kit is normalised on write *and* on read, so one stored on an earlier visit is validated again
-rather than trusted for having come from local storage, and normalising an already-normalised kit changes
-nothing.
+**Brand import.** The brief pane imports a brand from a site through Migma's real project-import route
+(`POST /v1/projects/import`). Migma reads the site and returns the brand it inferred; that inferred
+brand is workspace-authored, untrusted input, so it passes through `normKit` before it can touch the
+email artifact. Every colour must be a three- or six-digit hex and nothing else, so a `var()` reference
+or a value trailing a second declaration falls back to the token it was meant to replace; font stacks
+are read one family at a time against a whitelist (a bare or fully quoted name, at most eight in 120
+characters, no room for a `url()`, scheme, unbalanced quote, comment, brace or semicolon); locales must
+match a language-tag pattern; and an ink that fails 4.5:1 against its own paper is re-derived rather
+than honoured. One rejected family rejects the whole stack. A kit is normalised on write *and* on read,
+so one stored on an earlier visit is validated again rather than trusted for having come from local
+storage. Migma's own generation already carries the imported brand, so the kit only retints the local
+preview and the pre-generation export.
 
-**Languages.** The header's language select offers whatever locales the workspace's kits declare, then the
-common set. **Translate** sends the source copy to `/campaigns/translate`; the result is stored as a
-variant, and the preview, **Copy HTML**, the download and the saved payload all read whichever variant is
-on screen, so what is on screen is what ships. Every translation runs from the source copy rather than from
-another translation, so a second language cannot inherit the drift of the first. Merge tokens are checked
-across the round trip and any the translator paraphrased are named, because a rewritten
-`{{unsubscribe_url}}` is a dead link in the send. Regenerating the body clears the variants with it.
+**Languages.** The brief offers extra generation languages as toggles. They are passed to the generate
+job as `languages[]`; a completed job returns one email per language, and the preview's language select
+switches between the returned emails. There is no separate translate call — the one that used to exist
+hit a route Migma does not publish, and it is now a pending capability.
 
 ## Resource and lifecycle
 
-Nothing outlives the view that started it. Every generative request runs under an `AbortController` held on
-a ref, and the controller is aborted from the app's unmount cleanup and from each transition that clears the
-body it was writing into — a new analysis, a different angle chosen in step two, **Stop**, **Create
-another**, and any backward jump on the rail. Step two's own reviewer and comment reads get a second
-controller scoped to the effect that issues them, so leaving that step cancels them on the way out. Closing
-the app mid-stream therefore leaves no reader draining in the background and no timer waiting to fire into a
-component that is gone.
+Nothing outlives the view that started it. The generation job runs under an `AbortController` held on a
+ref, aborted from the app's unmount cleanup and from each transition that abandons it — a new analysis,
+**Stop**, **Create another**, and any backward jump on the rail. The brand import runs on its own
+controller, aborted on unmount. Closing the app mid-job therefore leaves no poll loop running in the
+background and no timer waiting to fire into a component that is gone.
 
-A cancelled stream is cancelled at the body, not merely unhooked from it: the reader is cancelled *and*
-released, because releasing the lock alone would hand the stream back while leaving the response open. Both
-calls are guarded, since neither is meaningful on a stream that has already ended by itself.
+The polling backoff is abortable: no interval is published, so the client paces itself — a short first
+wait growing geometrically to a ceiling under an overall budget — and the wait rejects the moment the
+signal fires rather than at the end of the delay. A `429` during polling or any other call is handled
+the same way; its `retry-after` wait is abortable too, so an abandoned request leaves no live timer.
 
-Retry backoff is abortable too. A `429` may carry a `retry-after` measured in tens of seconds, and the wait
-rejects the moment the signal fires rather than at the end of the delay, so an abandoned request leaves no
-live timer and issues no retry.
-
-Replies that land after an `await` are fenced twice: the app must still be mounted, and the reply must be the
-newest one asked for on its own channel — ideas, body, score, workspace, comments and translation each keep
-their own counter, so a slow answer to a question the user has moved on from is dropped rather than painted
-over the current one. Writes are the exception and are not cancelled: a saved draft or a posted comment may
-already have been accepted by the workspace, and marking it un-sent would contradict the workspace's own
-record. They are fenced on mount alone, and a posted note's failure notice is pinned to the thread it
-belongs to.
+Replies that land after an `await` are fenced twice: the app must still be mounted, and the reply must
+be the newest one asked for on its own channel — the digest read and the generation each keep their own
+counter — so a slow answer to a question the user has moved on from is dropped rather than painted over
+the current one. The brand import is fenced on mount alone, because an import that reached Migma is a
+real result whether or not the pane is still open to hear it.
 
 ## Themes
 
 **Settings → Appearance** offers Dark, White and System. `system` is resolved in JavaScript against
 `prefers-color-scheme` and re-resolved whenever the OS setting changes, so only a concrete `dark` or
-`light` ever reaches the DOM as `data-mg-theme` on the app root. The stylesheet therefore only ever
-has two states to reason about.
+`light` ever reaches the DOM as `data-mg-theme` on the app root. The stylesheet therefore only ever has
+two states to reason about.
 
-Dark is the base: all 68 theme properties are declared on `.mg-app`, and
-`.mg-app[data-mg-theme="light"]` overrides the 50 that invert. Nothing is light-only, so a token can
-never resolve to nothing if the attribute is missing. The 18 that stay put are the non-colour concerns
-— type stack, radii, durations, easings — plus the brand constants: the eight-stop spectrum, the
-selection pair, and `#22c55e` / `#f38c05` / `#ef4444`.
+Dark is the base: the theme properties are declared on `.mg-app`, and `.mg-app[data-mg-theme="light"]`
+overrides the ones that invert. Nothing is light-only, so a token can never resolve to nothing if the
+attribute is missing. The invariants are the non-colour concerns — type stack, radii (including the
+pill radius CTAs take), durations, easings — plus the brand constants: the official four-stop Migma
+gradient, the named palette (Migma Pink and the Cream/Ink/Plum/Terracotta/Sage set), the Pink selection
+tint, and the status hues `#22c55e` / `#f38c05` / `#ef4444`.
 
-Ten further properties sit outside that engine entirely. `--mg-em-*` is declared on `.mg-email`, defaults
-to the palette `metrics.js` writes, and is the only channel a brand kit has into the DOM — kit colours
-arrive as inline custom properties on that one element. A workspace therefore cannot reach the app's own
-two palettes at all, only the artifact inside the preview frame, which is why the 68/50 split above stays
-true no matter what a kit contains.
+A separate `--mg-em-*` set is declared on `.mg-email`, defaults to the palette `metrics.js` writes, and
+is the only channel a brand kit has into the DOM — kit colours arrive as inline custom properties on
+that one element. A workspace therefore cannot reach the app's own two palettes at all, only the
+artifact inside the preview frame.
 
-| Token | Dark | White |
-| --- | --- | --- |
-| `--mg-surface` | `#0a0a0a` | `#f9f9f9` |
-| `--mg-page` | `#0f0f0f` | `#ffffff` |
-| `--mg-raised` | `#161616` | `#f0f0f0` |
-| `--mg-line` | `#2a2a2a` | `#e5e5e5` |
-| body text | `#e2e2e3` | `#111111` |
-| status / success | `#22c55e` | `#22c55e` |
-
-Three exceptions:
+Three exceptions hold regardless of theme:
 
 - **The topbar button stays host-toned.** Spotify's own chrome has no light mode, so a white button
   sitting in it would read as broken rather than themed.
 - **The email preview stays light.** It is the artifact the recipient opens, not app chrome, so its
-  palette matches whatever the export carries — the HTML `metrics.js` writes, or the active brand kit's.
-  It does not follow the app theme, because the recipient's inbox will not either.
-- **Status text darkens in light mode only.** The three brand hues stay verbatim for borders and
-  washes, but `#22c55e` on white is unreadable at 11px, so text runs use darker variants of the same
-  hue.
+  palette matches whatever the export carries. It does not follow the app theme, because the
+  recipient's inbox will not either.
+- **Status text darkens in light mode only.** The brand hues stay verbatim for borders and washes, but
+  `#22c55e` on white is unreadable at 11px, so text runs use darker variants of the same hue.
 
-Contrast is measured against the substrate a run lands on, not against the page. Cards darken as
-they are used — `#f0f0f0` at rest, `#e9e9ea` on hover, `#e7e7e7` once selected — so the two light greys
-that carry 10–12px text are set against the deepest of those rather than against white: `--mg-tx3`
-`#5f5f64` and `--mg-tx4` `#66666b` clear 4.5:1 on every light substrate, the tightest being 4.53:1. Dark
-clears it everywhere too, with one exception: `--mg-tx4` on `--mg-fill` reaches 4.17:1, and its only use is
-`.mg-select:disabled`, which WCAG exempts as an inactive component.
-
-The rail follows the same rule. Its labels sit on `--mg-surface` — 5.42:1 at the dimmest — and the number
-inside a not-yet-reached circle takes `--mg-tx3` rather than `--mg-tx4`, because `--mg-fill` is the one
-substrate where the lighter grey drops to that exempt 4.17:1 and a step number is text either way. The
-finished circle pairs `--mg-tx` with `--mg-step` for 7.37:1, not `--mg-inv-tx`, which would land at 2.72:1.
-
-## Design tokens
-
-The palette, radii, easings, display face and the raised-button geometry in `style.css` are read out of
-migma.ai's own stylesheet and `/brandkit/` rather than approximated: zinc borders, a 3px bottom border on
-raised buttons that collapses to 1px on press, 4/6/8/12/16px radii and no pill shapes. The warm eight-stop
-spectrum reaches exactly six rules and nothing else: the streaming chip and its hover, the metric bar's
-leading fill, the score meter's fill, and the two buttons that invoke Migma's generative side —
-**Choose an angle** and **Generate**. On the buttons and the chip it is a wash beneath a flat overlay, so the
-spectrum reads as a warm edge rather than a rainbow. Every other forward action is the monochrome raised
-primary, which inverts per theme: white with black text on dark, near-black with white text on white,
-because a white button on a white page has nothing to stand on.
-
-The progress rail is outside that scheme: a 3px track filled with `--mg-inv`, a `--mg-step` circle
-on a finished step, `--mg-fill` on one not yet reached. Progress is structure, not a generative event, so it
-carries none of the spectrum.
+Contrast is measured against the substrate a run lands on, not against the page. The warm brand colours
+are accents only — they never carry body text or paint the shell. Text tiers hold a 4.5:1 WCAG AA floor;
+the one documented exemption is `.mg-select:disabled`, which WCAG exempts as an inactive component.
 
 Both `.woff2` files are bundled so headings render offline; each `@font-face` lists the local file first
 and `https://migma.ai/fonts/…` second, then falls through to the system sans if Spotify's CSP blocks the
-remote fetch.
-
-The plugin never paints Spotify's green itself — that colour arrives from the client's own chrome around
-it. Everything the app draws is Migma's.
+remote fetch. The plugin never paints Spotify's green itself — that colour arrives from the client's own
+chrome around it.
 
 ## What it reads
 
-Read-only, through the client's own session, so there is no second OAuth prompt and no scopes to request:
-`/v1/playlists/{id}`, `/v1/playlists/{id}/tracks` (paged, capped at 1000), `/v1/artists?ids=` (batched 50),
-`/v1/me/playlists`.
+Read-only, through the client's own session, so there is no second OAuth prompt and no scopes to
+request: `/v1/playlists/{id}`, `/v1/playlists/{id}/tracks` (paged, capped at 1000), `/v1/artists?ids=`
+(batched 50), `/v1/me/playlists`, and `/v1/tracks/{id}` for a single-track announcement.
 
 Audience tags come from genre, popularity, runtime and release dates. Nothing is inferred from audio —
 Spotify's `audio-features` endpoint is closed to new clients, so there is no energy or valence scoring.
 
 ## The Migma API
 
-The published reference is **[docs.migma.ai](https://docs.migma.ai)**. Five pages carry everything this
-plugin depends on:
+The published reference is **[docs.migma.ai](https://docs.migma.ai)**; start at
+[`/llms.txt`](https://docs.migma.ai/llms.txt) for the full index, and
+[`/api-reference/introduction`](https://docs.migma.ai/api-reference/introduction) for the envelope,
+status codes, rate limits and idempotency.
 
-| Page | What it settles |
-| --- | --- |
-| [`/api-reference/introduction`](https://docs.migma.ai/api-reference/introduction) | Endpoint list, response envelope, status codes, rate limits, pagination, idempotency |
-| [`/quickstart`](https://docs.migma.ai/quickstart) | Concrete request and reply shapes for the generate-and-poll pipeline |
-| [`/authentication`](https://docs.migma.ai/authentication) | Key prefixes, the scope list, and the rules on where a key may live |
-| [`/agent-auth`](https://docs.migma.ai/agent-auth) | The claim-code flow, written for clients that cannot host an OAuth callback |
-| [`/llms.txt`](https://docs.migma.ai/llms.txt) | The full page index — how to find anything the four above do not cover |
-
-Start at `/llms.txt` if you are looking for something specific. The landing page shows three endpoints and
-reads like a complete reference; the index behind it runs to well over a hundred pages.
-
-### Getting a key
-
-Migma dashboard → **Settings → Developer → API keys**. Two prefixes are issued, `sk_test_` and `sk_live_`,
-and **both are secret** — there is no publishable or browser-safe key type. The value is shown once, at
-creation, and not again.
-
-Scope it at creation too. Omitting `scope` grants the full permission set, which includes `email:send` and
-`billing:write` — a key minted to read projects will spend money if it was never narrowed. Sixteen scopes
-exist: `audience:read` · `audience:write` · `email:read` · `email:write` · `email:send` · `email:validate` ·
-`email:preview` · `domain:read` · `domain:write` · `campaign:read` · `campaign:write` · `project:write` ·
-`webhook:read` · `webhook:write` · `billing:read` · `billing:write`.
-
-Keys are account-wide rather than project-scoped, so a call touching a project-owned resource needs an
-explicit `projectId`. Leaving it out answers `404`, not `403`, which is worth knowing before you go looking
-for a permissions problem that is not there.
-
-### Transport
-
-Base URL `https://api.migma.ai/v1`, authenticated with `Authorization: Bearer <key>`. Every reply carries
-one envelope:
+**Transport.** Base URL `https://api.migma.ai/v1`, authenticated with `Authorization: Bearer <key>` —
+set only by the proxy, never by this client. Every reply carries one envelope:
 
 ```json
 { "success": true, "data": {}, "metadata": { "timestamp": "…", "requestId": "…" } }
 ```
 
-A failure is `{ "success": false, "error": "Invalid or missing API key" }`. **`error` is a plain string** —
-there is deliberately no machine-readable code field, so the status line is the only thing worth branching
-on. `401` reads "Invalid or missing API key", `403` reads "Insufficient permissions". The request id lives
-under `metadata`, not in a header, and is what to quote in a support thread.
+A failure is `{ "success": false, "error": "…" }`. **`error` is a plain string** — there is no
+machine-readable code field, so the status line is the only thing worth branching on. The request id
+lives under `metadata`, not in a header.
 
-### Rate limits, retries and idempotency
+**Rate limits.** Standard is 500/min and 10,000/day; Enterprise 1,000 and 50,000. `X-RateLimit-Reset`
+is an **epoch timestamp**, not a number of seconds; a `429` body also carries `retryAfter`. `api.js`
+reads both and takes whichever is plausible.
 
-| Plan | Per minute | Per day |
+**Keys are account-wide**, so a call touching a project-owned resource needs an explicit `projectId`;
+leaving it out answers `404`, not `403`. Both key prefixes (`sk_test_`, `sk_live_`) are secret — there
+is no browser-safe key type — which is the whole reason for the proxy.
+
+**The pipeline.** Generation is an asynchronous job, not a stream. `POST /v1/projects/emails/generate`
+with `{ projectId, prompt, languages[] }` answers `{ conversationId, status: "pending" }`; from there
+`GET /v1/projects/emails/{conversationId}/status` is polled until `status` reads `completed`, at which
+point `data.result.emails[]` holds one entry per language carrying `emailId`, `subject`, `html` and
+`screenshotUrl`. No polling interval is published; the only timing the docs commit to is 30–60 seconds
+for a brand import.
+
+## API alignment
+
+What is live is wired to a route Migma actually publishes. What is pending has a surface in the UI but
+no endpoint yet, so the plugin renders a *pending Migma API* state and makes **no** call —
+`Migma.api.PENDING_MIGMA_API` is the flag the UI reads, and the proxy exposes none of the invented
+routes (a request to one is a `404`).
+
+| Feature | Status | Route |
 | --- | --- | --- |
-| Standard | 500 | 10,000 |
-| Enterprise | 1,000 | 50,000 |
+| Connect (Spotify session → scoped proxy session) | **Live** | proxy `POST /session` → Spotify `GET /v1/me` |
+| List projects | **Live** | `GET /v1/projects` |
+| Import a brand from a site | **Live** | `POST /v1/projects/import` |
+| Generate campaign email(s) | **Live** | `POST /v1/projects/emails/generate` → poll `…/{conversationId}/status` |
+| Multi-language output | **Live** | `languages[]` on generate (one email per language) |
+| Export HTML (copy / download) | **Live** | local — Migma's returned `html`, verbatim |
+| Playlist / track / artist reads | **Live** | Spotify, through the client's own session |
+| Suggested angles | **Pending** | no published route (was `/campaigns/ideas`) |
+| Draft / deliverability scoring | **Pending** | no published route (was `/campaigns/score`) |
+| On-demand translation of existing copy | **Pending** | no published route (was `/campaigns/translate`); use `languages[]` instead |
+| Reviewer assignment | **Pending** | dashboard-only (was `/workspaces/reviewers`) |
+| Comment threads | **Pending** | dashboard / real-time only (was `/workspaces/comments`) |
 
-`X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` ride on every reply. **`Reset` is an
-epoch timestamp rather than a number of seconds** — wait until it passes, do not sleep for its value. A `429`
-body carries `retryAfter` beside it. `api.js` reads both and takes whichever is plausible, since a small
-number is a wait and a large one is a clock.
+There is no server-side campaign save: `POST /v1/campaigns` wraps an already-generated `emailId` rather
+than storing a draft, so the plugin does not call it. Export is terminal and local.
 
-Writes that must not double up take an optional `Idempotency-Key` header, at most 100 characters, cached per
-key for 24 hours. A replay comes back marked `Idempotent-Replayed: true`; the same key with a changed body
-answers `409`; an over-length key answers `400`. Only `POST /v1/sending`, the campaign send and schedule
-calls, and the three contact writes honour it — and `429`/`5xx` replies are never cached, so a retry after
-either is a fresh attempt whether or not it carries a key.
+`Migma.api.ENDPOINTS` names only the live routes above; realigning the client to a schema change is
+confined to that map and the normalisers beneath it.
 
-Collections take `limit` and `offset`, and echo `total`, `limit` and `offset` back in the payload.
-
-### The pipeline
-
-Generation is an asynchronous job, not a stream. `POST /v1/projects/emails/generate` with
-`{ projectId, prompt, languages[] }` answers `{ conversationId, status: "pending" }`. From there
-`GET /v1/projects/emails/{conversationId}/status` is polled until `status` reads `completed`, at which point
-`data.result.emails[]` holds one entry per language carrying `emailId`, `subject`, `html` and
-`screenshotUrl`. **No polling interval is published.** The only timing the docs commit to is that brand
-imports take 30–60 seconds.
-
-| Job | Call |
-| --- | --- |
-| List projects | `GET /v1/projects` · `GET /v1/projects/{projectId}` |
-| Import a brand | `POST /v1/projects/import` `{ urls[], name }` — async; the reply nests `data.data.projectId` |
-| Generate | `POST /v1/projects/emails/generate` → poll `GET /v1/projects/emails/{conversationId}/status` |
-| Read or revise one email | `GET /v1/emails/{emailId}` · `POST /v1/emails/{emailId}/edit` `{ prompt }` |
-| Validate | `POST /v1/emails/validate/compatibility` · `/links` · `/spelling` · `/deliverability` · `/all` |
-| Preview | `POST /v1/emails/previews` |
-| Wrap an email in a campaign | `POST /v1/campaigns` — takes an existing `emailId` |
-| Send | `POST /v1/sending` |
-| Export | `GET /v1/export/html/{conversationId}` and the `png`, `pdf`, `klaviyo`, `mailchimp` siblings · `POST /v1/export/hubspot` · `GET /v1/export/status/{conversationId}` |
-
-### What this client asks for
-
-`Migma.api.ENDPOINTS` does not name the published routes. One of the nine lines up:
-
-| `ENDPOINTS` key and path | Published counterpart |
-| --- | --- |
-| `projects` → `/projects` | `GET /v1/projects` — exact, plus `limit` and `offset` |
-| `ideas` → `/campaigns/ideas` | none; no angles route exists |
-| `generate` → `/campaigns/generate` | `POST /v1/projects/emails/generate` plus polling — the client reads SSE instead |
-| `save` → `/campaigns` | the path exists but wraps an already-generated `emailId`; it is not a draft store |
-| `score` → `/campaigns/score` | nearest is `POST /v1/emails/validate/deliverability`, which takes a finished email rather than a brief and forecasts inbox placement rather than conversion |
-| `translate` → `/campaigns/translate` | not a route; pass `languages: ["en","de"]` to generate |
-| `reviewers` → `/workspaces/reviewers` | team access is dashboard-only |
-| `comments` → `/workspaces/comments` | canvas comments are dashboard and real-time only |
-| `brandKits` → `/workspaces/brand-kits` | a brand *is* a project — import one with `POST /v1/projects/import` |
-
-That map and the response normalisers beneath it are the only place any route is named, so realigning the
-client is confined to `api.js`.
-
-### Why no key is stored here
+## Why no key is stored here
 
 `/authentication` is explicit: *"Keep keys out of client-side code and git."* A Spicetify custom app is
-client-side code by construction, and its local storage is shared with the player, so a key pasted into the
-plugin would sit in plain text beside the host client's own state.
+client-side code by construction, and its local storage is shared with the player, so a key pasted into
+the plugin would sit in plain text beside the host client's own state.
 
-So the plugin holds none. It posts the Spotify session this client is already using to a proxy you run, and
-the proxy answers with a short-lived scoped session. Migma's secret stays on the proxy, which is the only
-party that ever sets `Authorization: Bearer`. The exchanged session lives in `api.js` module scope, keyed by
-the proxy that issued it, and is never written to disk — a reload mints another, and a `401` mid-call mints
-one and repeats the call rather than failing it.
-
-`/agent-auth` documents a second route worth knowing about, written for exactly the case of a client that
-cannot host an OAuth callback. `POST /agent/identity` returns a user code and a verification URI, the user
-approves it in a browser, and `POST /oauth2/token` exchanges the claim for a scoped `sk_live_` key — no
-callback anywhere in the loop. It trades a proxy for a key on the client, so it is the alternative to weigh
-if running a service is the part you want gone. The docs are as explicit about its handling: *"Keep it and
-`claim_token` out of chat, logs, shell history, and shared files."*
-
-Whether either path reaches Migma from inside the client at all depends on CORS, which is unverified. A probe
-from `https://xpui.app.spotify.com` answered `500` on discovery and on both preflights with no
-`Access-Control-*` header on any reply — inconclusive rather than negative. A proxy sidesteps the question
-for Migma calls, but must itself answer the Spotify client's origin.
-
-## Assumptions to confirm
-
-The routes are settled — [The Migma API](#the-migma-api) records the published shape and the nine-line table
-of what this client asks for against it. What that reference does not settle:
-
-1. **Polling interval.** Generation is a job to be polled, and no interval is published; the only timing the
-   docs commit to is 30–60 seconds for a brand import. Backoff is therefore chosen, not specified.
-2. **Which envelope the proxy speaks.** `failure()` reads Migma's `{ success: false, error: "…" }` and takes
-   `requestId` from `metadata`, with header readings kept as fallbacks for whatever the proxy surfaces on its
-   own behalf. A proxy that reshapes replies rather than forwarding them changes only that function.
-3. **CORS from the client origin.** Unverified in both directions — see the note closing the API section. The
-   proxy must send `Access-Control-*` for `https://xpui.app.spotify.com` whatever Migma does.
-4. **How the Spotify session reaches the proxy.** `spotifyToken()` reads four accessor shapes in turn
-   because Spicetify names the client's own token differently across releases, and returns `""` rather than
-   guessing when none answers. Which shape is live here has not been exercised against a running client.
-5. **What the proxy validates.** The session is presented as-is; `GET https://api.spotify.com/v1/me` is the
-   obvious check on the proxy's side, but nothing in this client depends on which one it makes.
-6. **Brand tokens.** Taken from the public migma.ai build, as described above. If the internal design
-   system has moved past it, the two token blocks at the top of `style.css` are the only thing to touch.
-7. **Brand kit fields.** Kit colour and font keys are read under several spellings (`cta_text_color`,
-   `ctaTextColor`, `display_font`, `heading_font`, …) and anything unrecognised is derived from what is
-   there. A kit that declares only an accent still renders correctly.
-8. **Segments.** Carried alongside each angle. No route supplies them, so they are the client's own; if
-   Migma ever exposes a list, the segment select reads it instead of offering free text.
-9. **System appearance.** Whether `prefers-color-scheme` varies inside Spotify's Electron shell
-   depends on how that shell sets `nativeTheme.themeSource`. If it pins one value, **System** will sit on
-   it and the explicit Dark and White options are the way to switch.
-
-One internal coupling is worth naming: `metrics.js` writes the export's palette and type as literal values,
-and brand kits are applied to that output by substituting those literals. Every anchor lives in one place —
-`brandedHtml` in `index.js` — so changing a colour or a font shorthand in `metrics.js` means updating that
-function in the same edit.
+So the plugin holds none. It posts the Spotify session this client is already using to a proxy you run,
+and the proxy answers with a short-lived scoped session. Migma's secret stays on the proxy, which is the
+only party that ever sets `Authorization: Bearer`. The exchanged session lives in `api.js` module scope,
+keyed by the proxy that issued it, and is never written to disk — a reload mints another, and a `401`
+mid-call mints one and repeats the call rather than failing it.
 
 ## Boundaries
 
-No sending, no recipient lists, no unsubscribe handling inside Spotify. The plugin produces a draft and
-hands off; Migma owns delivery and consent. `{{unsubscribe_url}}` is left as a merge token in the exported
-HTML, in the footer's `href`, for Migma's merge step to resolve.
+No sending, no recipient lists, no unsubscribe handling inside Spotify. The plugin produces HTML and
+hands off; Migma owns delivery and consent. `{{unsubscribe_url}}` is left as a merge token in the
+exported HTML, in the footer's `href`, for Migma's merge step to resolve.
 
-The same line holds for the enterprise surfaces: assignment and comments are recorded against the workspace,
-not delivered by the plugin, and the pre-flight score is an estimate read before the save rather than a
-gate on it. Nothing on the pre-flight card blocks a campaign, and nothing on it leaves the client until the
-draft is saved.
+Two things are **unverified against a live Spicetify client** and are boundaries rather than claims:
+
+1. **CORS from the client origin.** Whether a browser request from `https://xpui.app.spotify.com`
+   reaches the proxy has not been exercised end to end; a probe to Migma directly from that origin was
+   inconclusive. The proxy must send `Access-Control-*` for that origin whatever Migma does.
+2. **Spotify session-token retrieval.** `spotifyToken()` reads four accessor shapes in turn because
+   Spicetify names the client's own token differently across releases, and returns `""` rather than
+   guessing when none answers. Which shape is live has not been exercised against a running client.
+
+
+
