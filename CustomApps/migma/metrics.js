@@ -187,7 +187,7 @@ Migma.compose = (() => {
     const d = digest;
     // Artist announcement: a fan-release email in the artist's own voice, built from either a
     // single track or a release playlist. Same digest shape, different framing.
-    if (settings.campaignType === "artist") {
+    if (settings.campaignType === "artist_announce") {
       const artist = (d.topArtists[0] && d.topArtists[0].name) || d.playlist.owner || "the artist";
       const release = d.single ? `the new track "${d.playlist.name}"` : `the release "${d.playlist.name}"`;
       const lines = [

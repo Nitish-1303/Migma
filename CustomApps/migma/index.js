@@ -38,7 +38,7 @@ window.Migma = window.Migma || {};
   // for a release, sourced from a playlist or a single track.
   const CAMPAIGN_TYPES = [
     { value: "playlist", label: "Playlist campaign" },
-    { value: "artist", label: "Artist announcement" }
+    { value: "artist_announce", label: "Artist announcement" }
   ];
   // The three panes of step two. Only the brief calls a live endpoint; angles and review name
   // capabilities Migma has not published a route for, so they render a pending state in place.
@@ -119,23 +119,36 @@ window.Migma = window.Migma || {};
     if (m) return m[1];
     return /^[a-zA-Z0-9]{20,24}$/.test(raw) ? raw : "";
   };
-  // A handoff carries the entry point's intent: the context menu and the topbar aimed at a
-  // specific playlist, so the picker is skipped. An inferred route only preselects it.
-  function detectPlaylist() {
+  // A handoff carries the entry point's intent: the context menu and the topbar aimed at a specific
+  // playlist or track on purpose, so the picker is skipped. An inferred route only preselects. A
+  // track handoff flips the app into artist-announcement mode, because that is the only type a single
+  // track sources.
+  function detectSource() {
     const handoff = Migma.store.takeHandoff();
-    if (handoff) return { id: playlistId(handoff.uri), direct: handoff.direct !== false };
+    if (handoff) {
+      const direct = handoff.direct !== false;
+      if (/track/.test(String(handoff.uri))) {
+        const t = trackId(handoff.uri);
+        if (t) return { kind: "track", id: t, direct };
+      }
+      const p = playlistId(handoff.uri);
+      if (p) return { kind: "playlist", id: p, direct };
+    }
     try {
-      const fromRoute = playlistId(Spicetify.Platform.History.location.pathname);
-      if (fromRoute) return { id: fromRoute, direct: false };
+      const path = Spicetify.Platform.History.location.pathname || "";
+      const p = playlistId(path);
+      if (p) return { kind: "playlist", id: p, direct: false };
+      const t = (path.match(/track[:/]([a-zA-Z0-9]+)/) || [])[1];
+      if (t) return { kind: "track", id: t, direct: false };
     } catch (e) {
       /* route unavailable during boot */
     }
     const visited = playlistId(Migma.store.lastVisited());
-    if (visited) return { id: visited, direct: false };
+    if (visited) return { kind: "playlist", id: visited, direct: false };
     try {
-      return { id: playlistId((Spicetify.Player.data.context || {}).uri), direct: false };
+      return { kind: "playlist", id: playlistId((Spicetify.Player.data.context || {}).uri), direct: false };
     } catch (e) {
-      return { id: "", direct: false };
+      return { kind: "playlist", id: "", direct: false };
     }
   }
 
@@ -518,7 +531,7 @@ window.Migma = window.Migma || {};
   // announcement — and in announcement mode a single track can be pasted or taken from the player,
   // because a release is as often one track as a playlist.
   function PickView({ state, progress, query, onQuery, onPick, onChange, campaignType, onType, onTrack, onUseCurrent }) {
-    const artist = campaignType === "artist";
+    const artist = campaignType === "artist_announce";
     const [trackUrl, setTrackUrl] = useState("");
     const list = useMemo(() => {
       const q = query.trim().toLowerCase();
@@ -1068,13 +1081,18 @@ window.Migma = window.Migma || {};
         .then(items => fresh() && patch({ playlists: items.map(normPlaylist) }))
         .catch(() => fresh() && patch({ playlists: [] }));
 
-      const { id, direct } = detectPlaylist();
-      if (!id) return;
+      const src = detectSource();
+      if (!src.id) return;
+      if (src.kind === "track") {
+        setSettings(Migma.store.set({ campaignType: "artist_announce", sourceKind: "track" }));
+        analyseTrack(src.id);
+        return;
+      }
       try {
-        const found = normPlaylist(await Migma.api.playlist(id));
+        const found = normPlaylist(await Migma.api.playlist(src.id));
         if (!fresh()) return;
         patch({ detected: found, source: found });
-        if (direct) analyse(found);
+        if (src.direct) analyse(found);
       } catch (e) {
         /* the picker is still available */
       }
@@ -1085,6 +1103,7 @@ window.Migma = window.Migma || {};
     // not there yet but the playlist is, and the list underneath must not come back in the gap.
     async function analyse(source) {
       cancelPending();
+      setSettings(Migma.store.set({ sourceKind: "playlist" }));
       patch({
         view: "pick",
         source,
@@ -1156,6 +1175,7 @@ window.Migma = window.Migma || {};
     // channel as a playlist so the newest source wins and the rest of the flow is identical.
     async function analyseTrack(id) {
       cancelPending();
+      setSettings(Migma.store.set({ sourceKind: "track" }));
       patch({
         view: "pick",
         source: { id, name: "Track", image: "", owner: "", tracks: 1, followers: 0 },
