@@ -136,11 +136,24 @@ test("artist mode frames a fan announcement brief", () => {
   assert.equal(trackDigest.playlist.owner, "Hale");
   assert.ok(trackDigest.tags.includes("fresh-release"));
 
-  const brief = M.compose.brief(trackDigest, null, { campaignType: "artist", tone: "warm", length: "short", ctaLabel: "Listen now" });
+  const brief = M.compose.brief(trackDigest, null, { campaignType: "artist_announce", tone: "warm", length: "short", ctaLabel: "Listen now" });
   assert.match(brief, /fan announcement/i);
   assert.match(brief, /Hale/);
   assert.match(brief, /Midnight Static/);
   assert.match(brief, /brand-new release/i);
+});
+
+test("store defaults carry the campaign type and source kind", () => {
+  assert.equal(M.store.defaults.campaignType, "playlist");
+  assert.equal(M.store.defaults.sourceKind, "playlist");
+});
+
+test("a track uri survives the handoff mechanism and is consumed once", () => {
+  M.store.setHandoff("spotify:track:4iV5W9uYEdYUVa79Axb7Rh", true);
+  const h = M.store.takeHandoff();
+  assert.equal(h.uri, "spotify:track:4iV5W9uYEdYUVa79Axb7Rh");
+  assert.equal(h.direct, true);
+  assert.equal(M.store.takeHandoff(), null);
 });
 
 test("playlist mode brief stays a campaign brief", () => {
