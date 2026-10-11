@@ -134,14 +134,30 @@ because the work in flight belongs to its step and the receipt describes copy al
 
 ## Campaign types
 
-The pick step's toggle chooses what the campaign is built from. Both types share the same
-generate-and-poll pipeline, languages and export; only the brief template differs.
+The pick step's toggle chooses what the campaign is built from. All of them share the same
+generate-and-poll pipeline, languages and export; only the inputs and the brief template differ.
 
 - **Playlist campaign** — the flagship. A playlist's audience, drafted into a campaign email: tone,
   length and CTA over a brief built from the digest's genres, eras, popularity and tags.
-- **Artist announcement** — a fan-release email in the artist's own voice, sourced from a playlist or a
-  single track. A track is read with `GET /v1/tracks/{id}` and reduced by `metrics.trackDigest` to the
-  same digest shape a playlist produces, so the preview, brief and export need no special case.
+- **Artist announcement** — a fan-release email in the artist's own voice, sourced from a playlist or
+  a single track. A track is read with `GET /v1/tracks/{id}` and reduced by `metrics.trackDigest` to
+  the same digest shape a playlist produces.
+- **Playlist pitch** — a professional note from an artist to a curator. Reads the artist's track and
+  the target playlist (`GET /v1/playlists/{id}` + a sample of its titles) and writes a pitch that
+  references the target's own tracks. Not a fan email.
+- **Show promo** — a live-date announcement. The date list (city, venue, date, ticket link) is manual
+  input stored in settings; there is no ticketing API, so nothing about dates or tickets is invented.
+  A **MOCK** chip marks the one place fake data would appear — nearest-city ordering by listener
+  location, which no endpoint exposes — so dates stay in entry order.
+- **Label digest** — a weekly round-up of new releases across a roster. Each roster artist's releases
+  are read with `GET /v1/artists/{id}/albums` and filtered client-side to the last 7 days
+  (`metrics.recentReleases`). Real data: an empty roster or a quiet week shows the empty state rather
+  than fabricated releases.
+
+**New-release watch.** A per-artist toggle in Settings. While the app is open — and only then, there
+is no background daemon — it polls the artist's releases on open and at most once every 15 minutes,
+baselines on the first poll, and shows a one-time banner when a newer release id appears. The banner's
+only action drafts an artist announcement; nothing is ever sent automatically.
 
 ## Brand and languages
 
