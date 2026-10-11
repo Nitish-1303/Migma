@@ -1,4 +1,6 @@
+import { ok } from "../lib/http.js";
 import { SCOPES } from "../lib/session.js";
+import * as demo from "../lib/demo.js";
 import {
   MAX_PROMPT,
   optionalLocales,
@@ -26,8 +28,14 @@ export function registerEmailRoutes(router) {
         projectId: payload.projectId,
         promptChars: payload.prompt.length,
         languages: languages ? languages.length : 0,
+        demo: ctx.config.demoMode,
         requestId: ctx.requestId
       });
+
+      if (ctx.config.demoMode) {
+        const conversationId = demo.start(payload.prompt, payload.languages);
+        return { status: 200, body: ok({ conversationId, status: "pending" }, ctx.requestId) };
+      }
 
       return ctx.migma({
         method: "POST",
@@ -46,6 +54,11 @@ export function registerEmailRoutes(router) {
       const query = {};
       const projectId = ctx.query.get("projectId");
       if (projectId) query.projectId = requireId(projectId, "projectId");
+
+      if (ctx.config.demoMode) {
+        const state = demo.status(ctx.params.conversationId, ctx.config.demoDelayMs);
+        return { status: 200, body: ok(state, ctx.requestId) };
+      }
 
       return ctx.migma({
         method: "GET",

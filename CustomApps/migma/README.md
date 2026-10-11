@@ -19,28 +19,41 @@ that does not exist. See [API alignment](#api-alignment).
 Ships as a Spicetify **custom app** (sidebar route) plus a bundled **extension** (topbar button and
 playlist context-menu item).
 
-## Install
+## Install and run (demo mode)
 
-Copy this folder into the Spicetify custom apps directory:
+A live run with no Migma key, using the proxy's demo mode.
+
+1. Install Spicetify if you do not have it (see spicetify.app), then run `spicetify` once to initialise.
+2. Copy this folder into Spicetify's CustomApps directory:
 
 | OS | Path |
 | --- | --- |
 | Windows | `%APPDATA%\spicetify\CustomApps\migma` |
 | macOS / Linux | `~/.config/spicetify/CustomApps/migma` |
 
-Then register and apply:
+3. Enable the custom app and apply:
 
 ```bash
 spicetify config custom_apps migma
-```
-
-```bash
 spicetify apply
 ```
 
+4. Start the proxy in demo mode. No Migma key is needed; it returns canned emails:
+
+```bash
+cd proxy
+cp .env.example .env   # set SESSION_SECRET to the output of: openssl rand -hex 32
+DEMO_MODE=1 npm start
+```
+
+The plugin defaults its proxy URL to `http://localhost:8788` (change it in Settings if your proxy
+runs elsewhere). Open MigmaAI in the Spotify sidebar, Connect, pick a playlist, and Generate: the
+brief goes to the proxy, which waits a few seconds and returns a canned email marked "Simulated
+locally - pending Migma API access". With `DEMO_MODE` unset the proxy calls api.migma.ai as normal.
+
 `manifest.json` loads `store.js`, `api.js`, `metrics.js` and `ui.js` before `index.js`, and registers
-`extension.js` as an extension so the topbar button exists on every page, not just inside the app. The
-folder name stays `migma` (and the route stays `/migma`); the app's display name is **MigmaAI**.
+`extension.js` as an extension so the topbar button exists on every page. The folder name stays
+`migma` and the route stays `/migma`; the display name is MigmaAI.
 
 ## Entry points
 

@@ -6,7 +6,7 @@ Migma.store = (() => {
   const CACHE_TTL = 30 * 60 * 1000;
 
   const defaults = {
-    proxyUrl: "",
+    proxyUrl: "http://localhost:8788",
     projectId: "",
     projectName: "",
     theme: "system",

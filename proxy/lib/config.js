@@ -47,7 +47,10 @@ export function loadConfig({ envFile = path.join(ROOT, ".env") } = {}) {
 
   const problems = [];
 
-  const apiKey = String(process.env.MIGMA_API_KEY || "").trim();
+  // In demo mode the Migma key is never used, so a run needs no real key.
+  const demoMode = flag("DEMO_MODE", false);
+
+  const apiKey = String(process.env.MIGMA_API_KEY || (demoMode ? "sk_test_demo" : "")).trim();
   if (!apiKey) problems.push("MIGMA_API_KEY is required");
   else if (!/^sk_(live|test)_.+/.test(apiKey)) {
     problems.push("MIGMA_API_KEY must begin with sk_live_ or sk_test_");
@@ -82,7 +85,8 @@ export function loadConfig({ envFile = path.join(ROOT, ".env") } = {}) {
       spotifyTimeoutMs: integer("SPOTIFY_TIMEOUT_MS", 5000, { min: 500, max: 30000 }),
       maxBodyBytes: integer("MAX_BODY_BYTES", 131072, { min: 1024, max: 5242880 }),
       rateLimitPerMinute: integer("RATE_LIMIT_PER_MINUTE", 120, { min: 1, max: 100000 }),
-      sessionRateLimitPerMinute: integer("SESSION_RATE_LIMIT_PER_MINUTE", 10, { min: 1, max: 10000 })
+      sessionRateLimitPerMinute: integer("SESSION_RATE_LIMIT_PER_MINUTE", 10, { min: 1, max: 10000 }),
+      demoDelayMs: integer("DEMO_DELAY_MS", 3000, { min: 0, max: 60000 })
     };
   } catch (error) {
     problems.push(error.message);
@@ -103,6 +107,8 @@ export function loadConfig({ envFile = path.join(ROOT, ".env") } = {}) {
     allowedOrigins: Object.freeze(origins),
     allowedSpotifyUsers: Object.freeze(list("ALLOWED_SPOTIFY_USERS")),
     logLevel: String(process.env.LOG_LEVEL || "info").trim(),
-    trustProxyHeaders: flag("TRUST_PROXY_HEADERS", false)
+    trustProxyHeaders: flag("TRUST_PROXY_HEADERS", false),
+    // When on, the generate route returns a canned email instead of calling api.migma.ai.
+    demoMode
   });
 }

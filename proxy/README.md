@@ -57,6 +57,8 @@ platform secret store overrides the file rather than fighting it.
 | `SESSION_RATE_LIMIT_PER_MINUTE` | `10` | `POST /session`, keyed per address. |
 | `LOG_LEVEL` | `info` | `error` \| `warn` \| `info` \| `debug`. |
 | `TRUST_PROXY_HEADERS` | `false` | Read `X-Forwarded-For` for rate limiting. Only true behind a proxy you control. |
+| `DEMO_MODE` | `false` | On: the generate route returns a canned email instead of calling api.migma.ai, and no Migma key is required. |
+| `DEMO_DELAY_MS` | `3000` | How long a demo job stays pending before it completes. |
 
 ## What it exposes
 
