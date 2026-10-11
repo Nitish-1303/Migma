@@ -168,3 +168,20 @@ test("the app loaded and exposed its entry points", () => {
   assert.equal(typeof M.App, "function");
   assert.equal(typeof render, "function");
 });
+
+test("no external font or brand-asset URLs are referenced from the plugin", () => {
+  const sources = ["style.css", "store.js", "api.js", "metrics.js", "ui.js", "index.js", "extension.js"];
+  for (const f of sources) {
+    const text = fs.readFileSync(path.join(dir, f), "utf8");
+    // The brand host must never be fetched at runtime — fonts and the logo are bundled locally.
+    assert.ok(!/migma\.ai/.test(text), `${f} must not reference migma.ai`);
+  }
+  // No stylesheet url() may point off-box: fonts and the mark are local files or data URIs.
+  const css = fs.readFileSync(path.join(dir, "style.css"), "utf8");
+  assert.ok(!/url\(\s*['"]?https?:\/\//i.test(css), "style.css url() must not fetch an external resource");
+  assert.ok(css.includes('url("migma-app-logo-512.webp")'), "the mark should be the bundled logo");
+  // The bundled assets exist on disk.
+  for (const asset of ["migma-app-logo-512.webp", "migma-app-icon-512.webp", "migma-wordmark-white.png", "MigmaAIDisplayTitle-Bold.woff2"]) {
+    assert.ok(fs.existsSync(path.join(dir, asset)), `${asset} must be bundled`);
+  }
+});
