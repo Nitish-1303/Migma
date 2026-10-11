@@ -324,6 +324,18 @@ only party that ever sets `Authorization: Bearer`. The exchanged session lives i
 keyed by the proxy that issued it, and is never written to disk — a reload mints another, and a `401`
 mid-call mints one and repeats the call rather than failing it.
 
+## Mocks
+
+Everything the app shows is real except one clearly-marked spot. Each mock carries a visible **MOCK**
+chip in the UI and a `// MOCK:` comment in the code.
+
+| Mock | Where | Why it is mocked |
+| --- | --- | --- |
+| Nearest-city ordering of show dates | Show-promo input panel | Ordering a tour date list by fan proximity would need Spotify listener-location data, which no public endpoint exposes. Dates stay in entry order; nothing about a city, venue, date or ticket link is invented. |
+
+Deliverability scoring is **not** a mock — it is a pending capability (no Migma endpoint), so the export
+surface shows a "pending Migma API" state rather than a fabricated number.
+
 ## Boundaries
 
 No sending, no recipient lists, no unsubscribe handling inside Spotify. The plugin produces HTML and
