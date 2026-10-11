@@ -22,7 +22,14 @@ Migma.store = (() => {
     brandSite: "",
     brandKitId: "",
     brandKit: null,
-    languages: []
+    languages: [],
+    showArtist: "",
+    dates: [],
+    labelName: "",
+    roster: [],
+    watchArtist: "",
+    watchOn: false,
+    watchSeen: ""
   };
 
   let settings = null;
@@ -52,10 +59,12 @@ Migma.store = (() => {
     }
   }
 
-  // `languages` is the one setting held as a list, so a store written by hand or left by an
-  // older shape would otherwise reach the request builder as something it cannot iterate.
+  // Settings held as lists would otherwise reach the request builders as something they cannot
+  // iterate if an older store or a hand-edit left them a non-array.
   function normalise(next) {
-    if (!Array.isArray(next.languages)) next.languages = [];
+    for (const key of ["languages", "dates", "roster"]) {
+      if (!Array.isArray(next[key])) next[key] = [];
+    }
     return next;
   }
 
