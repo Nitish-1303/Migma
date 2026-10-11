@@ -5,7 +5,9 @@ that plugin, designed and running.
 
 [Live storyboard](https://migma-wireframe.vercel.app/)
 
-![60-second run of the live plugin](TODO-DEMO-GIF)
+[Watch the demo - 1 min, with narration](VID-20261011-WA0004.mp4)
+
+<p align="center"><img src="wireframe/migma-logo-animated.gif" width="140"></p>
 
 ## Why Migma should care
 
