@@ -28,10 +28,20 @@
     }
   }
 
+  function isTrack(uri) {
+    try {
+      return Spicetify.URI.isTrack(uri);
+    } catch (e) {
+      return /^spotify:track:/.test(String(uri));
+    }
+  }
+
   function routeUri() {
     const path = String((Spicetify.Platform.History.location || {}).pathname || "");
-    const m = path.match(/playlist\/([a-zA-Z0-9]+)/);
-    return m ? `spotify:playlist:${m[1]}` : "";
+    let m = path.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (m) return `spotify:playlist:${m[1]}`;
+    m = path.match(/track\/([a-zA-Z0-9]+)/);
+    return m ? `spotify:track:${m[1]}` : "";
   }
 
   // `direct` says the user aimed at this playlist on purpose, so the app opens on the
@@ -50,16 +60,18 @@
 
   function sync() {
     const uri = routeUri();
-    if (uri) Migma.store.noteVisited(uri);
+    if (uri && isPlaylist(uri)) Migma.store.noteVisited(uri);
 
-    const onPlaylist = Boolean(uri);
-    const text = onPlaylist ? "Campaign" : "MigmaAI";
-    label.textContent = text;
+    const onPlaylist = Boolean(uri) && isPlaylist(uri);
+    const onTrack = Boolean(uri) && isTrack(uri);
+    label.textContent = onPlaylist ? "Campaign" : onTrack ? "Announce" : "MigmaAI";
     button.label = onPlaylist
       ? "Create a MigmaAI campaign from this playlist"
+      : onTrack
+      ? "Announce this track with MigmaAI"
       : "Open MigmaAI";
     button.element.setAttribute("aria-label", button.label);
-    button.element.classList.toggle("is-hot", onPlaylist);
+    button.element.classList.toggle("is-hot", onPlaylist || onTrack);
   }
 
   sync();
@@ -69,6 +81,13 @@
     "Create MigmaAI campaign",
     uris => open(uris[0], true),
     uris => uris.length === 1 && isPlaylist(uris[0]),
+    ICON
+  ).register();
+
+  new Spicetify.ContextMenu.Item(
+    "Create MigmaAI announcement",
+    uris => open(uris[0], true),
+    uris => uris.length === 1 && isTrack(uris[0]),
     ICON
   ).register();
 })();
