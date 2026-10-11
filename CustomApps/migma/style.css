@@ -1,15 +1,13 @@
 @font-face {
   font-family: MigmaDisplay;
-  src: url("MigmaAIDisplayTitle-Bold.woff2") format("woff2"),
-       url("https://migma.ai/fonts/MigmaAIDisplayTitle-Bold.woff2") format("woff2");
+  src: url("MigmaAIDisplayTitle-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: MigmaDisplay;
-  src: url("MigmaAIDisplayTitle-BoldItalic.woff2") format("woff2"),
-       url("https://migma.ai/fonts/MigmaAIDisplayTitle-BoldItalic.woff2") format("woff2");
+  src: url("MigmaAIDisplayTitle-BoldItalic.woff2") format("woff2");
   font-weight: 700;
   font-style: italic;
   font-display: swap;
@@ -53,7 +51,7 @@
   --mg-out: cubic-bezier(0, 0, 0.2, 1);
   --mg-cubic: cubic-bezier(0.33, 1, 0.68, 1);
 
-  /* The official Migma gradient (migma.ai brand kit) — the generative spectrum the plugin
+  /* The official Migma brand gradient — the generative spectrum the plugin
      reveals behind its AI actions. */
   --mg-spectrum: linear-gradient(90deg, #f4021e, #e501b7, #f48402, #f4021e);
   /* The named brand palette. The warm colours are accents only: they never carry body text and
@@ -126,11 +124,11 @@
   --mg-accent-line: #ffffff2e;
   --mg-accent-wash: #ffffff0a;
 
-  --mg-shadow: 0 8px 32px #0006, inset 0 0 0 1px #ffffff0d, inset 0 1px 0 #ffffff1a;
+  --mg-shadow: 0 4px 16px #0000004d, inset 0 0 0 1px #ffffff0d;
   --mg-shadow-float: 0 16px 48px #00000080, inset 0 0 0 1px #ffffff14, inset 0 1px 0 #ffffff26;
   --mg-seg-inset: inset 0 1px 0 #ffffff14;
 
-  --mg-mark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 360'><path d='M280 0H80C35.8 0 0 35.8 0 80V280C0 324.2 35.8 360 80 360H280C324.2 360 360 324.2 360 280V80C360 35.8 324.2 0 280 0Z' fill='%23fff'/><path d='M262.8 93.7C266.8 91.2 272 94.1 272 98.8V266C272 269.3 269.3 272 266 272H93C89.7 272 87 269.3 87 266V98.8C87 94.1 92.2 91.2 96.2 93.7L176.3 143.9C178.3 145.1 180.7 145.1 182.7 143.9L262.8 93.7Z' fill='%231a1a1a'/></svg>");
+  --mg-mark: url("migma-app-logo-512.webp");
   --mg-chev: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a8a8d' stroke-width='1.6'><path d='M4 6.5 8 10.5 12 6.5'/></svg>");
 
   display: flex;
@@ -218,7 +216,7 @@
   --mg-shadow-float: 0 16px 40px #00000014, inset 0 0 0 1px #0000000d;
   --mg-seg-inset: inset 0 1px 0 #ffffffb3;
 
-  --mg-mark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 360'><path d='M280 0H80C35.8 0 0 35.8 0 80V280C0 324.2 35.8 360 80 360H280C324.2 360 360 324.2 360 280V80C360 35.8 324.2 0 280 0Z' fill='%23111'/><path d='M262.8 93.7C266.8 91.2 272 94.1 272 98.8V266C272 269.3 269.3 272 266 272H93C89.7 272 87 269.3 87 266V98.8C87 94.1 92.2 91.2 96.2 93.7L176.3 143.9C178.3 145.1 180.7 145.1 182.7 143.9L262.8 93.7Z' fill='%23f9f9f9'/></svg>");
+  --mg-mark: url("migma-app-logo-512.webp");
   --mg-chev: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2352525b' stroke-width='1.6'><path d='M4 6.5 8 10.5 12 6.5'/></svg>");
 }
 
@@ -376,7 +374,7 @@
 .mg-btn--ghost {
   color: var(--mg-ghost-tx);
   background: transparent;
-  border: 1px solid var(--mg-line);
+  border: 1px solid var(--mg-line-2);
   box-shadow: none;
 }
 .mg-btn--ghost:hover:not(:disabled) { background: var(--mg-ghost-hover); color: var(--mg-tx); border-color: var(--mg-line-2); }
