@@ -47,8 +47,9 @@ folder name stays `migma` (and the route stays `/migma`); the app's display name
 | Surface | Behaviour |
 | --- | --- |
 | Sidebar | Custom-app route at `/migma` |
-| Topbar button | Reads "Campaign" on a playlist page, "MigmaAI" everywhere else |
+| Topbar button | "Campaign" on a playlist page, "Announce" on a track page, "MigmaAI" everywhere else |
 | Playlist context menu | "Create MigmaAI campaign" |
+| Track context menu | "Create MigmaAI announcement" — opens artist-announcement mode on that track |
 
 Both the topbar button and the context-menu item call `open(uri, direct)`, which records an explicit
 intent flag through `store.setHandoff(uri, direct)`. A `direct` handoff means the user aimed at that
