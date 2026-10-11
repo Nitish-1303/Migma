@@ -13,14 +13,19 @@
  --line:#2a2a2a;--lineS:#ffffff14;
  --tx:#ffffff;--tx2:#e2e2e3;--tx3:#939393;
  --sp:#1ed760;--ok:#22c55e;--mg:#ffffff;--mg2:#e2e2e3;--warn:#f38c05;--err:#ef4444;
- --spec:linear-gradient(90deg,#a649f8,#e3185f,#f74a06,#f38c05,#ffc400,#292929,#d4d3d3,#a649f8);
+ --inpline:#2e2e32;
+ /* Official Migma gradient + named brand palette (migma.ai brand kit). The warm colours are
+    accents only; selection takes a Migma Pink tint. */
+ --spec:linear-gradient(90deg,#f4021e,#e501b7,#f48402,#f4021e);
+ --pink:#f21f62;--cream:#f7f1e8;--brink:#231916;--plum:#5c1a3a;--terra:#c97c5d;--sage:#a8b29b;
  --cube:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 360'><path d='M280 0H80C35.8 0 0 35.8 0 80V280C0 324.2 35.8 360 80 360H280C324.2 360 360 324.2 360 280V80C360 35.8 324.2 0 280 0Z' fill='%23fff'/><path d='M262.8 93.7C266.8 91.2 272 94.1 272 98.8V266C272 269.3 269.3 272 266 272H93C89.7 272 87 269.3 87 266V98.8C87 94.1 92.2 91.2 96.2 93.7L176.3 143.9C178.3 145.1 180.7 145.1 182.7 143.9L262.8 93.7Z' fill='%231a1a1a'/></svg>");
- --r1:4px;--r2:8px;--r3:12px;--r4:16px;
+ --r1:4px;--r2:8px;--r3:12px;--r4:16px;--rp:9999px;
  --f:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
  --fd:MigmaDisplay,var(--f);
  --ez:cubic-bezier(.33,1,.68,1);
 }
 html{background:var(--bg)}
+::selection{background:#f21f6299;color:#fff}
 body{font-family:var(--f);color:var(--tx);line-height:1.45;font-synthesis:none;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4{font-family:var(--fd);font-weight:700;letter-spacing:.5px}
 a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
@@ -38,6 +43,10 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 .lede{color:var(--tx2);max-width:66ch;font-size:15px}
 .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 .meta span{font-size:12px;color:var(--tx2);border:1px solid var(--line);border-radius:var(--r2);padding:6px 12px;background:var(--s1)}
+.brandlock{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.brandlock img{display:block}
+.brandlock .wm{height:24px;width:auto;opacity:.95}
+.brandlock .lg{width:44px;height:44px;border-radius:var(--r2)}
 
 .sec{display:flex;flex-direction:column;gap:20px}
 .sechd{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--lineS);padding-bottom:12px}
@@ -51,7 +60,7 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 .frame>.flabel b{color:var(--tx2);font-weight:600}
 .fwrap{padding-top:26px}
 /* ---------- generic atoms used inside frames ---------- */
-.btn{border:0;border-radius:var(--r2);font-family:var(--f);font-size:13px;font-weight:700;padding:10px 18px;cursor:default;
+.btn{border:0;border-radius:var(--rp);font-family:var(--f);font-size:13px;font-weight:700;padding:10px 20px;cursor:default;
  letter-spacing:.2px;color:#000;background:linear-gradient(180deg,#fff 0%,#f0f0f0 100%);
  border-top:1px solid #e8e8e8;border-left:1px solid #e0e0e0;border-right:1px solid #ccc;border-bottom:3px solid #b0b0b0;
  box-shadow:inset 0 1px 0 0 #ffffffe6,inset 0 -1px 1px 0 #0000000d,0 2px 4px #0000001a}
@@ -66,7 +75,7 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
  border:1px solid var(--line);border-radius:var(--r1);padding:5px 9px;background:#1e1e1e}
 .chip.on{color:#000;border-color:#fff;background:#fff}
 .chip.sp{color:var(--ok);border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.08)}
-.inp{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 13px;
+.inp{width:100%;background:var(--s2);border:1px solid var(--inpline);border-radius:var(--r2);padding:11px 13px;
  font-family:var(--f);font-size:13px;color:var(--tx)}
 .inp.ph{color:var(--tx3)}
 .lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin-bottom:7px}
@@ -265,6 +274,10 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
 <div class="board">
 
 <section class="cover">
+  <div class="brandlock">
+    <img class="lg" src="https://migma.ai/brandkit/app/migma-app-logo-512.webp?v=migma-20260919" alt="Migma app logo" width="44" height="44" loading="lazy">
+    <img class="wm" src="https://migma.ai/brandkit/wordmark/PNG/light.png" alt="Migma" height="24" loading="lazy">
+  </div>
   <div class="eyebrow">Spicetify custom app</div>
   <h1>Playlist&#8209;to&#8209;Email <em>Campaign Automator</em></h1>
   <p class="lede">Turn any Spotify playlist into a ready-to-send Migma email campaign without leaving the client.</p>
