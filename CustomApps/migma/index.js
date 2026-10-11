@@ -38,7 +38,10 @@ window.Migma = window.Migma || {};
   // for a release, sourced from a playlist or a single track.
   const CAMPAIGN_TYPES = [
     { value: "playlist", label: "Playlist campaign" },
-    { value: "artist_announce", label: "Artist announcement" }
+    { value: "artist_announce", label: "Artist announcement" },
+    { value: "playlist_pitch", label: "Playlist pitch" },
+    { value: "show_promo", label: "Show promo" },
+    { value: "label_digest", label: "Label digest" }
   ];
   // The three panes of step two. Only the brief calls a live endpoint; angles and review name
   // capabilities Migma has not published a route for, so they render a pending state in place.
@@ -104,7 +107,10 @@ window.Migma = window.Migma || {};
     importing: false,
     done: false,
     error: null,
-    notice: null
+    notice: null,
+    pitchTarget: null,
+    releases: null,
+    newRelease: null
   };
 
   const patchReducer = (state, patch) =>
@@ -119,6 +125,30 @@ window.Migma = window.Migma || {};
     if (m) return m[1];
     return /^[a-zA-Z0-9]{20,24}$/.test(raw) ? raw : "";
   };
+  const artistId = uri => {
+    const m = String(uri || "").trim().match(/artist[:/]([a-zA-Z0-9]+)/);
+    if (m) return m[1];
+    const raw = String(uri || "").trim();
+    return /^[a-zA-Z0-9]{20,24}$/.test(raw) ? raw : "";
+  };
+
+  // A digest-shaped object for the campaign types that have no single Spotify source to read — a
+  // show announcement, a label digest. The fields the preview and the composer touch are present;
+  // the audience metrics a playlist would carry are simply zero.
+  const syntheticDigest = ({ id, name, owner, image, tracks }) => ({
+    playlist: { id: id || "synthetic", name: name || "", description: "", owner: owner || "", followers: 0, image: image || "" },
+    trackCount: tracks ? tracks.length : 0,
+    artistCount: 0,
+    avgPopularity: 0,
+    explicitShare: 0,
+    runtimeShort: "",
+    runtimeLong: "",
+    genres: [],
+    eras: [],
+    topArtists: [],
+    tags: [],
+    tracks: tracks || []
+  });
   // A handoff carries the entry point's intent: the context menu and the topbar aimed at a specific
   // playlist or track on purpose, so the picker is skipped. An inferred route only preselects. A
   // track handoff flips the app into artist-announcement mode, because that is the only type a single
@@ -307,7 +337,7 @@ window.Migma = window.Migma || {};
         note ||
         "Migma has not published an endpoint for this yet. The plugin leaves it here, inert, rather than call a route that does not exist — it lights up the moment the API ships one."
     });
-  function ConnectView({ theme, onTheme, onConnected, onForget }) {
+  function ConnectView({ theme, onTheme, onConnected, onForget, settings, onSetting }) {
     const saved = Migma.store.get();
     const [proxyUrl, setProxyUrl] = useState(saved.proxyUrl);
     const [projects, setProjects] = useState([]);
@@ -426,6 +456,30 @@ window.Migma = window.Migma || {};
           h(U.Seg, { value: theme, options: THEMES, onChange: onTheme })
         ),
         h("div", { className: "mg-divider" }),
+        onForget &&
+          h(
+            U.Field,
+            {
+              label: "Watch an artist",
+              hint: "Watches for a new release while the app is open — no background daemon. When one drops, a banner offers to draft an announcement."
+            },
+            h(U.Input, {
+              value: (settings && settings.watchArtist) || "",
+              placeholder: "https://open.spotify.com/artist/…",
+              onChange: e => onSetting({ watchArtist: e.target.value })
+            }),
+            h(
+              "div",
+              { className: "mg-optrow" },
+              h("span", null, settings && settings.watchOn ? "Watching while open" : "Watch off"),
+              h(U.Toggle, {
+                on: settings && settings.watchOn,
+                label: "Watch this artist",
+                onChange: v => onSetting({ watchOn: v })
+              })
+            )
+          ),
+        onForget && h("div", { className: "mg-divider" }),
         h(
           "p",
           { className: "mg-hint" },
@@ -530,7 +584,138 @@ window.Migma = window.Migma || {};
   // with its audience. A campaign-type toggle sits at the top — playlist campaign or artist
   // announcement — and in announcement mode a single track can be pasted or taken from the player,
   // because a release is as often one track as a playlist.
-  function PickView({ state, progress, query, onQuery, onPick, onChange, campaignType, onType, onTrack, onUseCurrent }) {
+  // Playlist pitch: the artist's track plus the curator's playlist, both read through Spotify.
+  function PitchPanel({ typeField, onBuild }) {
+    const [trackUrl, setTrackUrl] = useState("");
+    const [targetUrl, setTargetUrl] = useState("");
+    const ready = Boolean(trackId(trackUrl) && playlistId(targetUrl));
+    return h(
+      "div",
+      { className: "mg-body" },
+      typeField,
+      h(
+        "header",
+        null,
+        h("h2", { className: "mg-h2" }, "Pitch a track"),
+        h("p", { className: "mg-sub" }, "Pitch your track to a playlist curator. Both are read through Spotify.")
+      ),
+      h(
+        U.Field,
+        { label: "Your track", hint: "Paste a Spotify track link." },
+        h(U.Input, { value: trackUrl, placeholder: "https://open.spotify.com/track/…", onChange: e => setTrackUrl(e.target.value) })
+      ),
+      h(
+        U.Field,
+        { label: "Target playlist", hint: "The curator's playlist you are pitching to." },
+        h(U.Input, { value: targetUrl, placeholder: "https://open.spotify.com/playlist/…", onChange: e => setTargetUrl(e.target.value) })
+      ),
+      h(U.Btn, { block: true, disabled: !ready, onClick: () => onBuild(trackUrl, targetUrl) }, "Build pitch")
+    );
+  }
+
+  // Show promo: an editable date list, stored in settings. No ticketing API exists, so the rows
+  // are manual input and the links are whatever the artist pastes.
+  function ShowPanel({ typeField, settings, onSetting, onBuild }) {
+    const dates = settings.dates || [];
+    const setDates = next => onSetting({ dates: next });
+    const update = (i, k, v) => setDates(dates.map((d, j) => (j === i ? Object.assign({}, d, { [k]: v }) : d)));
+    const add = () => setDates(dates.concat([{ city: "", venue: "", date: "", ticket: "" }]));
+    const remove = i => setDates(dates.filter((_, j) => j !== i));
+    const ready = dates.some(d => d && (d.city || d.venue || d.date));
+    return h(
+      "div",
+      { className: "mg-body" },
+      typeField,
+      h(
+        "header",
+        null,
+        h("h2", { className: "mg-h2" }, "Announce shows"),
+        h("p", { className: "mg-sub" }, "Announce a date or a run of dates to your fans.")
+      ),
+      h(U.Field, { label: "Artist name" }, h(U.Input, { value: settings.showArtist, placeholder: "Your artist name", onChange: e => onSetting({ showArtist: e.target.value }) })),
+      h(
+        U.Field,
+        { label: "Tour dates", hint: "City, venue, date and a ticket link per row." },
+        h(
+          "div",
+          { className: "mg-rows" },
+          dates.length
+            ? dates.map((d, i) =>
+                h(
+                  "div",
+                  { key: i, className: "mg-row" },
+                  h(U.Input, { value: d.city, placeholder: "City", onChange: e => update(i, "city", e.target.value) }),
+                  h(U.Input, { value: d.venue, placeholder: "Venue", onChange: e => update(i, "venue", e.target.value) }),
+                  h(U.Input, { value: d.date, placeholder: "2026-11-02", onChange: e => update(i, "date", e.target.value) }),
+                  h(U.Input, { value: d.ticket, placeholder: "Ticket link", onChange: e => update(i, "ticket", e.target.value) }),
+                  h("button", { type: "button", className: "mg-x", title: "Remove", onClick: () => remove(i) }, "×")
+                )
+              )
+            : h("p", { className: "mg-hint" }, "No dates yet."),
+          h(U.Btn, { variant: "ghost", size: "sm", onClick: add }, "Add date")
+        )
+      ),
+      h(
+        "div",
+        { className: "mg-optrow" },
+        h(U.Chip, { tone: "warn" }, "MOCK"),
+        h("span", { className: "mg-hint", style: { margin: 0 } }, "Nearest-city ordering would use listener locations — no such API, so dates stay in entry order.")
+      ),
+      h(U.Btn, { block: true, disabled: !ready, onClick: onBuild }, "Build announcement")
+    );
+  }
+  // MOCK: a "nearest city first" segment would need Spotify listener-location data, which no public
+  // endpoint exposes; the date order is whatever the artist entered.
+
+  // Label digest: an editable roster, stored in settings. Releases are real — fetched per artist
+  // and filtered to the last 7 days — so an empty roster or a quiet week shows an honest empty state.
+  function LabelPanel({ typeField, settings, onSetting, onBuild, busy }) {
+    const roster = settings.roster || [];
+    const setR = next => onSetting({ roster: next });
+    const update = (i, k, v) => setR(roster.map((r, j) => (j === i ? Object.assign({}, r, { [k]: v }) : r)));
+    const add = () => setR(roster.concat([{ name: "", uri: "" }]));
+    const remove = i => setR(roster.filter((_, j) => j !== i));
+    const ready = roster.some(r => r && r.uri);
+    return h(
+      "div",
+      { className: "mg-body" },
+      typeField,
+      h(
+        "header",
+        null,
+        h("h2", { className: "mg-h2" }, "Weekly label digest"),
+        h("p", { className: "mg-sub" }, "New releases across your roster, from the last 7 days.")
+      ),
+      h(U.Field, { label: "Label name" }, h(U.Input, { value: settings.labelName, placeholder: "Your label", onChange: e => onSetting({ labelName: e.target.value }) })),
+      h(
+        U.Field,
+        { label: "Roster", hint: "Artist name and a Spotify artist link per row." },
+        h(
+          "div",
+          { className: "mg-rows" },
+          roster.length
+            ? roster.map((r, i) =>
+                h(
+                  "div",
+                  { key: i, className: "mg-row" },
+                  h(U.Input, { value: r.name, placeholder: "Artist", onChange: e => update(i, "name", e.target.value) }),
+                  h(U.Input, { value: r.uri, placeholder: "https://open.spotify.com/artist/…", onChange: e => update(i, "uri", e.target.value) }),
+                  h("button", { type: "button", className: "mg-x", title: "Remove", onClick: () => remove(i) }, "×")
+                )
+              )
+            : h("p", { className: "mg-hint" }, "No artists yet."),
+          h(U.Btn, { variant: "ghost", size: "sm", onClick: add }, "Add artist")
+        )
+      ),
+      h(U.Btn, { block: true, disabled: busy || !ready, onClick: onBuild }, busy ? "Reading releases…" : "Build digest")
+    );
+  }
+
+  // Step one is one surface: a campaign-type toggle, then the source inputs that type needs. The
+  // playlist and artist types read a Spotify source into a digest in place; pitch, show and label
+  // collect their inputs and build straight into step two.
+  function PickView(props) {
+    const { state, progress, query, onQuery, onPick, onChange, campaignType, onType, onTrack, onUseCurrent, settings, onSetting } = props;
     const artist = campaignType === "artist_announce";
     const [trackUrl, setTrackUrl] = useState("");
     const list = useMemo(() => {
@@ -567,15 +752,21 @@ window.Migma = window.Migma || {};
         state.digest ? h(Digest, { digest: state.digest }) : h(DigestWait, { progress })
       );
 
-    const submitTrack = () => {
-      const id = trackId(trackUrl);
-      if (id) onTrack(id);
-    };
     const typeField = h(
       U.Field,
       { label: "Campaign type" },
       h(U.Seg, { value: campaignType, options: CAMPAIGN_TYPES, onChange: onType })
     );
+
+    if (campaignType === "playlist_pitch") return h(PitchPanel, { typeField, onBuild: props.onBuildPitch });
+    if (campaignType === "show_promo") return h(ShowPanel, { typeField, settings, onSetting, onBuild: props.onBuildShow });
+    if (campaignType === "label_digest")
+      return h(LabelPanel, { typeField, settings, onSetting, onBuild: props.onBuildLabel, busy: state.reading });
+
+    const submitTrack = () => {
+      const id = trackId(trackUrl);
+      if (id) onTrack(id);
+    };
     const trackBlock = artist
       ? h(
           U.Field,
@@ -1227,11 +1418,158 @@ window.Migma = window.Migma || {};
       }
       analyseTrack(id);
     }
-      // Entering step two seeds the brief from the digest. There are no angles to choose first, so
-    // the Brief pane is where the step opens.
+
+    // Playlist pitch reads the artist's track and the curator's playlist, then builds straight into
+    // step two: the track is the preview source, the target playlist feeds the pitch brief.
+    async function analysePitch(trackUri, targetUri) {
+      const tId = trackId(trackUri);
+      const pId = playlistId(targetUri);
+      if (!tId || !pId) return;
+      cancelPending();
+      setSettings(Migma.store.set({ sourceKind: "track" }));
+      patch({
+        view: "pick",
+        reading: true,
+        source: { id: tId, name: "Track", image: "", owner: "", tracks: 1, followers: 0 },
+        digest: null,
+        pitchTarget: null,
+        emails: null,
+        emailId: "",
+        done: false,
+        error: null,
+        notice: null
+      });
+      retry.current = () => analysePitch(trackUri, targetUri);
+      const fresh = claim("digest");
+      try {
+        const [t, meta, titles] = await Promise.all([
+          Migma.api.track(tId),
+          Migma.api.playlist(pId),
+          Migma.api.playlistTitles(pId, 6)
+        ]);
+        const index = new Map((await Migma.api.artists((t.artists || []).map(a => a.id))).map(a => [a.id, a]));
+        const digest = Migma.metrics.trackDigest(t, index);
+        const target = {
+          name: meta.name || "the playlist",
+          description: String(meta.description || "").replace(/<[^>]*>/g, "").slice(0, 300),
+          trackTitles: titles
+        };
+        if (!fresh()) return;
+        setBriefText(Migma.compose.brief(digest, null, settings, { target }));
+        briefDirty.current = false;
+        patch({ digest, source: toTrackSource(digest), pitchTarget: target, reading: false, view: "refine", tab: "brief", stale: false });
+      } catch (err) {
+        if (fresh()) patch({ error: toError(err), reading: false });
+      }
+    }
+
+    // Show promo has no Spotify source — the dates are manual input — so it builds a synthetic
+    // digest and the brief from the date list, with no network call.
+    function buildShow() {
+      const artistName = (settings.showArtist || "").trim() || "the artist";
+      const dates = (settings.dates || []).filter(d => d && (d.city || d.venue || d.date));
+      const digest = syntheticDigest({ id: "show", name: `${artistName} — Live`, owner: artistName, image: "", tracks: [] });
+      cancelPending();
+      setBriefText(Migma.compose.brief(digest, null, settings, { artist: artistName, dates }));
+      briefDirty.current = false;
+      retry.current = buildShow;
+      patch({
+        view: "refine",
+        tab: "brief",
+        source: { id: "show", name: `${artistName} — Live`, image: "", tracks: 0, followers: 0 },
+        digest,
+        pitchTarget: null,
+        releases: null,
+        emails: null,
+        emailId: "",
+        done: false,
+        error: null,
+        stale: false,
+        notice: null
+      });
+    }
+
+    // Label digest fetches each roster artist's releases and keeps the last 7 days — real data, so
+    // an empty roster or a quiet week yields an empty release list rather than invented entries.
+    async function buildLabel() {
+      const label = (settings.labelName || "").trim() || "the label";
+      const roster = (settings.roster || []).filter(r => r && r.uri);
+      cancelPending();
+      patch({
+        view: "pick",
+        reading: true,
+        source: { id: "label", name: `${label} — New This Week`, image: "", tracks: 0, followers: 0 },
+        digest: null,
+        releases: null,
+        emails: null,
+        emailId: "",
+        done: false,
+        error: null,
+        notice: null
+      });
+      retry.current = buildLabel;
+      const fresh = claim("digest");
+      try {
+        const ids = roster.map(r => artistId(r.uri)).filter(Boolean);
+        const lists = await Promise.all(ids.map(id => Migma.api.artistAlbums(id).catch(() => [])));
+        const releases = Migma.metrics.recentReleases([].concat.apply([], lists), 7);
+        const digest = syntheticDigest({
+          id: "label",
+          name: `${label} — New This Week`,
+          owner: label,
+          image: (releases[0] || {}).image || "",
+          tracks: releases.slice(0, 10).map(r => ({ name: r.title, artist: r.artist, duration: "", image: r.image, url: r.url }))
+        });
+        if (!fresh()) return;
+        setBriefText(Migma.compose.brief(digest, null, settings, { label, releases }));
+        briefDirty.current = false;
+        patch({ digest, releases, reading: false, view: "refine", tab: "brief", stale: false });
+      } catch (err) {
+        if (fresh()) patch({ error: toError(err), reading: false });
+      }
+    }
+
+    // The watch banner's one action: open artist mode with the release pre-filled as a synthetic,
+    // brand-new-release digest. No auto-send — it only drafts.
+    function draftFromRelease(rel) {
+      const next = Migma.store.set({ campaignType: "artist_announce" });
+      setSettings(next);
+      const digest = syntheticDigest({ id: rel.id, name: rel.title, owner: rel.artist, image: rel.image, tracks: [] });
+      digest.single = true;
+      digest.eras = rel.date ? [{ label: String(rel.date).slice(0, 4), share: 100 }] : [];
+      digest.tags = ["fresh-release"];
+      cancelPending();
+      setBriefText(Migma.compose.brief(digest, null, next, undefined));
+      briefDirty.current = false;
+      patch({
+        newRelease: null,
+        view: "refine",
+        tab: "brief",
+        source: { id: rel.id, name: rel.title, image: rel.image, tracks: 1, followers: 0 },
+        digest,
+        pitchTarget: null,
+        releases: null,
+        emails: null,
+        emailId: "",
+        done: false,
+        error: null,
+        stale: false,
+        notice: null
+      });
+    }
+      // The type-specific inputs a brief needs beyond the digest, assembled from state and settings.
+    const briefContext = () => {
+      if (settings.campaignType === "playlist_pitch") return { target: state.pitchTarget };
+      if (settings.campaignType === "show_promo") return { artist: (settings.showArtist || "").trim(), dates: settings.dates };
+      if (settings.campaignType === "label_digest") return { label: (settings.labelName || "").trim(), releases: state.releases };
+      return undefined;
+    };
+
+    // Entering step two seeds the brief from the digest and the campaign type. There are no angles
+    // to choose first, so the Brief pane is where the step opens.
     function goRefine() {
       briefDirty.current = false;
-      setBriefText(Migma.compose.brief(state.digest, null, settings));
+      setBriefText(Migma.compose.brief(state.digest, null, settings, briefContext()));
       patch({ view: "refine", tab: "brief", stale: false, error: null });
     }
 
@@ -1239,13 +1577,47 @@ window.Migma = window.Migma || {};
     // rewrites it; once a generation exists, the same settings change marks the preview stale.
     useEffect(() => {
       if (state.view !== "refine" || briefDirty.current || !state.digest) return;
-      setBriefText(Migma.compose.brief(state.digest, null, settings));
+      setBriefText(Migma.compose.brief(state.digest, null, settings, briefContext()));
       if (state.emails && !state.generating) patch({ stale: true });
     }, [settings.tone, settings.length, settings.ctaLabel, settings.campaignType]);
 
     useEffect(() => {
       if (state.view === "refine" && state.emails && !state.generating) patch({ stale: true });
     }, [settings.includeTracklist, settings.includeArtwork, settings.accent]);
+
+    // Watch runs only while the app is open — there is no background daemon. On open and every 15
+    // minutes it reads the artist's releases, baselines on the first poll, and banners exactly once
+    // when a newer release id appears. watchSeen is read from the store, not a closure, so a second
+    // interval does not re-baseline against a stale value.
+    useEffect(() => {
+      if (!settings.watchOn) return undefined;
+      const id = artistId(settings.watchArtist);
+      if (!id) return undefined;
+      let active = true;
+      const check = async () => {
+        try {
+          const latest = Migma.metrics.latestRelease(await Migma.api.artistAlbums(id));
+          if (!active || !latest || !latest.id) return;
+          const seen = Migma.store.get().watchSeen;
+          if (!seen) {
+            Migma.store.set({ watchSeen: latest.id });
+            return;
+          }
+          if (Migma.metrics.isNewRelease(latest, seen)) {
+            Migma.store.set({ watchSeen: latest.id });
+            if (active) patch({ newRelease: latest });
+          }
+        } catch (e) {
+          /* best-effort; a failed poll just tries again next interval */
+        }
+      };
+      check();
+      const iv = setInterval(check, 15 * 60 * 1000);
+      return () => {
+        active = false;
+        clearInterval(iv);
+      };
+    }, [settings.watchOn, settings.watchArtist]);
 
     // Generation is an asynchronous job: this starts it and polls to completion, reporting the
     // job's state through onTick so the bar can say where it is without knowing the cadence. The
@@ -1441,6 +1813,8 @@ window.Migma = window.Migma || {};
       // proxy, the project and the appearance sit exactly where the flow already is.
       body = h(ConnectView, {
         theme: settings.theme,
+        settings,
+        onSetting,
         onTheme: v => onSetting({ theme: v }),
         onConnected: () => {
           setSettings(Migma.store.get());
@@ -1461,12 +1835,17 @@ window.Migma = window.Migma || {};
         state,
         progress,
         query: state.query,
+        settings,
+        onSetting,
         campaignType: settings.campaignType,
         onType: v => onSetting({ campaignType: v }),
         onQuery: q => patch({ query: q }),
         onPick: p => analyse(p),
         onTrack: analyseTrack,
         onUseCurrent: useCurrentTrack,
+        onBuildPitch: analysePitch,
+        onBuildShow: buildShow,
+        onBuildLabel: buildLabel,
         onChange: changePlaylist
       });
     } else if (state.view === "refine") {
@@ -1543,6 +1922,16 @@ window.Migma = window.Migma || {};
             index: stepIndex,
             onJump: state.done || state.busy || state.generating || state.importing ? null : stepTo
           })
+        : null,
+      state.newRelease
+        ? h(
+            "div",
+            { className: "mg-watch" },
+            h(U.Chip, { tone: "ai" }, "New release"),
+            h("span", { className: "mg-watch__t" }, `New release detected: ${state.newRelease.title}`),
+            h(U.Btn, { size: "sm", onClick: () => draftFromRelease(state.newRelease) }, "Draft announcement"),
+            h("button", { type: "button", className: "mg-x", title: "Dismiss", onClick: () => patch({ newRelease: null }) }, "×")
+          )
         : null,
       h("main", { className: "mg-main" }, body),
       action || chars

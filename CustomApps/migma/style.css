@@ -761,6 +761,27 @@ button.mg-rail__s:hover { color: var(--mg-tx); }
 .mg-brief { padding: 18px; overflow-y: auto; }
 .mg-optrow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--mg-hair); font-size: 12.5px; }
 .mg-optrow > *:last-child { margin-left: auto; }
+
+/* Editable date / roster rows (show promo, label digest). */
+.mg-rows { display: flex; flex-direction: column; gap: 8px; }
+.mg-row { display: flex; gap: 6px; align-items: center; }
+.mg-row .mg-inp { height: 34px; font-size: 12px; padding: 0 9px; }
+.mg-row .mg-x { flex: none; }
+
+/* The new-release watch banner, between the rail and the step surface. */
+.mg-watch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 16px 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--mg-line-2);
+  border-radius: var(--mg-r-md);
+  background: var(--mg-raised);
+  font-size: 12.5px;
+  color: var(--mg-tx2);
+}
+.mg-watch__t { flex: 1; min-width: 0; }
 .mg-swatch { flex: none; width: 30px; height: 24px; padding: 0; border: 1px solid var(--mg-line); border-radius: var(--mg-r-sm); background: none; cursor: pointer; }
 .mg-ta {
   display: block;
