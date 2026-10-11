@@ -45,6 +45,7 @@
   --mg-r-md: 8px;
   --mg-r-lg: 12px;
   --mg-r-xl: 16px;
+  --mg-r-pill: 9999px;
 
   --mg-fast: 0.15s;
   --mg-norm: 0.2s;
@@ -52,8 +53,19 @@
   --mg-out: cubic-bezier(0, 0, 0.2, 1);
   --mg-cubic: cubic-bezier(0.33, 1, 0.68, 1);
 
-  --mg-spectrum: linear-gradient(90deg, #a649f8, #e3185f, #f74a06, #f38c05, #ffc400, #292929, #d4d3d3, #a649f8);
-  --mg-sel: #dc5a1bb0;
+  /* The official Migma gradient (migma.ai brand kit) — the generative spectrum the plugin
+     reveals behind its AI actions. */
+  --mg-spectrum: linear-gradient(90deg, #f4021e, #e501b7, #f48402, #f4021e);
+  /* The named brand palette. The warm colours are accents only: they never carry body text and
+     never paint the dark neutral shell. Selection takes a Migma Pink tint; the rest stand ready
+     for the email artifact, which is the one surface a brand should outrank the shell on. */
+  --mg-pink: #f21f62;
+  --mg-cream: #f7f1e8;
+  --mg-brand-ink: #231916;
+  --mg-plum: #5c1a3a;
+  --mg-terracotta: #c97c5d;
+  --mg-sage: #a8b29b;
+  --mg-sel: #f21f6299;
   --mg-sel-tx: #fff;
 
   --mg-ok: #22c55e;
@@ -75,6 +87,7 @@
 
   --mg-line: #2a2a2a;
   --mg-line-2: #353535;
+  --mg-inp-line: #2e2e32;
   --mg-hair: #ffffff14;
   --mg-tint: #ffffff0a;
 
@@ -159,6 +172,7 @@
 
   --mg-line: #e5e5e5;
   --mg-line-2: #d4d4d8;
+  --mg-inp-line: #d4d4d8;
   --mg-hair: #00000012;
   --mg-tint: #0000000a;
 
@@ -323,8 +337,8 @@
 /* The raised primary: monochrome fill, four-sided bevel, and a 3px bottom border that
    collapses to 1px on press so the button physically sinks. */
 .mg-btn {
-  border-radius: var(--mg-r-md);
-  padding: 10px 18px;
+  border-radius: var(--mg-r-pill);
+  padding: 10px 20px;
   font: 700 13px var(--mg-sans);
   letter-spacing: 0.2px;
   color: var(--mg-act-tx);
@@ -418,7 +432,7 @@ button.mg-chip:not(.mg-chip--ai):disabled:hover { color: var(--mg-ghost-tx); bac
   display: block;
   width: 100%;
   height: 40px;
-  border: 1px solid var(--mg-line);
+  border: 1px solid var(--mg-inp-line);
   border-radius: var(--mg-r-md);
   padding: 0 12px;
   background-color: var(--mg-sunken);
