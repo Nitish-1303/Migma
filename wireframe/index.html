@@ -245,12 +245,40 @@ a{color:var(--tx);text-decoration:underline;text-underline-offset:3px}
 
 code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospace;font-size:11.5px;color:#e2e2e3;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px}
 
-/* The flow, one card per step. Inline SVG rather than a linked file, so the standalone
-   build keeps zero external subresources; the viewBox is cropped to the panel, inset 2px so
-   the container's own stroke is not clipped. Geometry is baked, so it only ever scales, and
-   the cap is the client shell's own width — the widest frame on the board — so the diagram
-   sits in the same column as every other section and its baked type lands at board scale. */
-.hiw{display:block;width:100%;max-width:1180px;height:auto}
+/* The flow, as an auto-rotating feature-steps pattern: steps on the left, the matching storyboard
+   screenshot on the right. Images are bundled PNGs (assets/flow/), referenced relatively, so the
+   standalone build keeps zero external subresources. */
+.flow{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:28px;align-items:start}
+.flow-steps{display:flex;flex-direction:column;gap:10px}
+.flow-step{position:relative;display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;
+ background:transparent;border:1px solid transparent;border-radius:var(--r3);padding:14px 14px 16px;cursor:pointer;
+ color:var(--tx);font-family:var(--f);opacity:.3;transition:opacity .3s var(--ez),background .3s var(--ez),border-color .3s var(--ez)}
+.flow-step:hover{opacity:.65}
+.flow-step.is-active{opacity:1;background:var(--s1);border-color:var(--line)}
+.flow-num{flex:none;width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+ font-size:14px;font-weight:700;color:var(--tx2);background:var(--s3)}
+.flow-step.is-active .flow-num{color:#fff;background:var(--spec);background-size:300% 100%;animation:sweep 7s linear infinite}
+.flow-tx{display:flex;flex-direction:column;gap:5px;min-width:0}
+.flow-tx b{font-size:15px;font-weight:700;color:var(--tx)}
+.flow-tx s{text-decoration:none;font-size:12.5px;line-height:1.55;color:var(--tx3)}
+.flow-step.is-active .flow-tx s{color:var(--tx2)}
+.flow-prog{position:absolute;left:14px;right:14px;bottom:7px;height:2px;border-radius:2px;background:var(--line);overflow:hidden;opacity:0}
+.flow-step.is-active .flow-prog{opacity:1}
+.flow-prog::after{content:'';position:absolute;inset:0;transform-origin:left;transform:scaleX(0);background:var(--spec);background-size:300% 100%}
+.flow-step.is-active .flow-prog::after{animation:flowfill var(--flow-dur,4s) linear forwards,sweep 7s linear infinite}
+.flow:hover .flow-step.is-active .flow-prog::after{animation-play-state:paused}
+@keyframes flowfill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.flow-stage{position:relative;aspect-ratio:3/2;border:1px solid var(--line);border-radius:var(--r3);background:#0a0a0a;overflow:hidden;
+ box-shadow:0 4px 16px #0000004d,inset 0 0 0 1px #ffffff0d}
+.flow-shot{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:16px;
+ opacity:0;transform:translateX(18px);transition:opacity .45s var(--ez),transform .45s var(--ez)}
+.flow-shot.is-active{opacity:1;transform:translateX(0)}
+@media (max-width:900px){.flow{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){
+  .flow-step.is-active .flow-num{animation:none}
+  .flow-step.is-active .flow-prog::after{animation:none;transform:scaleX(1)}
+  .flow-shot{transition:none}
+}
 
 /* ---------- fidelity toggle ---------- */
 .bar-top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:11px 16px;margin:-44px -28px 30px;
@@ -296,107 +324,39 @@ code{font-family:ui-monospace,'SFMono-Regular','Cascadia Code',Consolas,monospac
   </div>
 </section>
 
-<section class="sec">
+<section class="sec" id="flow">
   <div class="sechd"><h2>Flow</h2>
-    <p>Three steps. The rail under the header is the only way back.</p></div>
-  <svg class="hiw" viewBox="118 292 1684 648" role="img" aria-labelledby="hiwT hiwD">
-    <title id="hiwT">How it works — the three steps drawn out</title>
-    <desc id="hiwD">Four cards left to right on a connector line: Entry, step 1 Pick a playlist, step 2 Choose
-    and refine, step 3 Review and export. Each card carries an icon, a summary and three details.</desc>
-    <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
-      <rect x="118" y="292" width="1684" height="648" fill="#0a0a0a"/>
-      <rect x="120" y="294" width="1680" height="644" rx="28" fill="#141414" stroke="#2a2a2a" stroke-width="2"/>
-
-      <!-- connector, then a mask ring per badge so the line reads as broken -->
-      <path d="M357 372H1563" stroke="#2a2a2a" stroke-width="2"/>
-      <circle cx="357" cy="372" r="26.5" fill="#141414"/>
-      <circle cx="759" cy="372" r="26.5" fill="#141414"/>
-      <circle cx="1161" cy="372" r="26.5" fill="#141414"/>
-      <circle cx="1563" cy="372" r="26.5" fill="#141414"/>
-      <circle cx="357" cy="372" r="22" fill="#1e1e1e" stroke="#2a2a2a" stroke-width="2"/>
-      <circle cx="357" cy="372" r="3" fill="#939393"/>
-      <circle cx="759" cy="372" r="22" fill="#ffffff"/>
-      <text x="759" y="379" text-anchor="middle" font-size="20" font-weight="700" fill="#000000">1</text>
-      <circle cx="1161" cy="372" r="22" fill="#ffffff"/>
-      <text x="1161" y="379" text-anchor="middle" font-size="20" font-weight="700" fill="#000000">2</text>
-      <circle cx="1563" cy="372" r="22" fill="#152019" stroke="#22c55e" stroke-width="2"/>
-      <text x="1563" y="379" text-anchor="middle" font-size="20" font-weight="700" fill="#22c55e">3</text>
-      <!-- Entry -->
-      <g transform="translate(176,0)">
-        <rect y="430" width="362" height="452" rx="18" fill="#0f0f0f" stroke="#2a2a2a" stroke-width="2"/>
-        <rect x="30" y="476" width="64" height="64" rx="16" fill="#191919" stroke="#2a2a2a" stroke-width="1.5"/>
-        <g transform="translate(44,490) scale(1.5)" fill="none" stroke="#939393" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>
-        </g>
-        <text x="30" y="590" font-size="27" font-weight="700" fill="#ffffff">Entry</text>
-        <text x="30" y="632" font-size="19.5" fill="#939393">Three ways in, all landing</text>
-        <text x="30" y="664" font-size="19.5" fill="#939393">on the same route.</text>
-        <circle cx="38" cy="717.5" r="8" fill="#2a2a2a"/><circle cx="38" cy="717.5" r="4" fill="#939393"/>
-        <text x="58" y="724" font-size="19.5" fill="#e2e2e3">Left-nav item</text>
-        <circle cx="38" cy="763.5" r="8" fill="#2a2a2a"/><circle cx="38" cy="763.5" r="4" fill="#939393"/>
-        <text x="58" y="770" font-size="19.5" fill="#e2e2e3">Topbar button</text>
-        <circle cx="38" cy="809.5" r="8" fill="#2a2a2a"/><circle cx="38" cy="809.5" r="4" fill="#939393"/>
-        <text x="58" y="816" font-size="19.5" fill="#e2e2e3">Playlist right-click menu</text>
-      </g>
-
-      <!-- 1 · Pick a playlist -->
-      <g transform="translate(578,0)">
-        <rect y="430" width="362" height="452" rx="18" fill="#222222" stroke="#ffffff" stroke-width="2"/>
-        <rect x="30" y="476" width="64" height="64" rx="16" fill="#2f2f2f" stroke="#454545" stroke-width="1.5"/>
-        <g transform="translate(42.5,487) scale(1.5)" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 7h12"/><path d="M3 12h8"/><path d="M3 17h6"/><circle cx="17" cy="18" r="3"/><path d="M20 18V7l3 1.5"/>
-        </g>
-        <text x="30" y="590" font-size="27" font-weight="700" fill="#ffffff">Pick a playlist</text>
-        <text x="30" y="632" font-size="19.5" fill="#939393">Connect, choose a playlist,</text>
-        <text x="30" y="664" font-size="19.5" fill="#939393">read its audience.</text>
-        <circle cx="38" cy="717.5" r="8" fill="#3d3d3d"/><circle cx="38" cy="717.5" r="4" fill="#ffffff"/>
-        <text x="58" y="724" font-size="19.5" fill="#e2e2e3">Your library, read-only</text>
-        <circle cx="38" cy="763.5" r="8" fill="#3d3d3d"/><circle cx="38" cy="763.5" r="4" fill="#ffffff"/>
-        <text x="58" y="770" font-size="19.5" fill="#e2e2e3">Tracks · runtime · artists</text>
-        <circle cx="38" cy="809.5" r="8" fill="#3d3d3d"/><circle cx="38" cy="809.5" r="4" fill="#ffffff"/>
-        <text x="58" y="816" font-size="19.5" fill="#e2e2e3">Top genres and release era</text>
-      </g>
-      <!-- 2 · Choose & refine -->
-      <g transform="translate(980,0)">
-        <rect y="430" width="362" height="452" rx="18" fill="#222222" stroke="#ffffff" stroke-width="2"/>
-        <rect x="30" y="476" width="64" height="64" rx="16" fill="#2f2f2f" stroke="#454545" stroke-width="1.5"/>
-        <g transform="translate(44,490) scale(1.5)" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 6h-7"/><path d="M10 6H3"/><circle cx="12" cy="6" r="2.2"/>
-          <path d="M21 12h-9"/><path d="M8 12H3"/><circle cx="10" cy="12" r="2.2"/>
-          <path d="M21 18h-5"/><path d="M12 18H3"/><circle cx="14" cy="18" r="2.2"/>
-        </g>
-        <text x="30" y="590" font-size="27" font-weight="700" fill="#ffffff">Choose &amp; refine</text>
-        <text x="30" y="632" font-size="19.5" fill="#939393">Write the brief, generate,</text>
-        <text x="30" y="664" font-size="19.5" fill="#939393">pick a language.</text>
-        <circle cx="38" cy="717.5" r="8" fill="#3d3d3d"/><circle cx="38" cy="717.5" r="4" fill="#ffffff"/>
-        <text x="58" y="724" font-size="19.5" fill="#e2e2e3">Brief: tone, length, CTA</text>
-        <circle cx="38" cy="763.5" r="8" fill="#3d3d3d"/><circle cx="38" cy="763.5" r="4" fill="#ffffff"/>
-        <text x="58" y="770" font-size="19.5" fill="#e2e2e3">One email per language</text>
-        <circle cx="38" cy="809.5" r="8" fill="#3d3d3d"/><circle cx="38" cy="809.5" r="4" fill="#ffffff"/>
-        <text x="58" y="816" font-size="19.5" fill="#e2e2e3">Optional brand import</text>
-      </g>
-
-      <!-- 3 · Save & export -->
-      <g transform="translate(1382,0)">
-        <rect y="430" width="362" height="452" rx="18" fill="#152019" stroke="#22c55e" stroke-width="2"/>
-        <rect x="30" y="476" width="64" height="64" rx="16" fill="#1c2b21" stroke="#2e4a36" stroke-width="1.5"/>
-        <g transform="translate(44,490) scale(1.5)" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/>
-        </g>
-        <text x="30" y="590" font-size="27" font-weight="700" fill="#ffffff">Review &amp; export</text>
-        <text x="30" y="632" font-size="19.5" fill="#939393">Review the email, export</text>
-        <text x="30" y="664" font-size="19.5" fill="#939393">clean HTML.</text>
-        <circle cx="38" cy="717.5" r="8" fill="#2e4a36"/><circle cx="38" cy="717.5" r="4" fill="#22c55e"/>
-        <text x="58" y="724" font-size="19.5" fill="#e2e2e3">Scoring — pending Migma API</text>
-        <circle cx="38" cy="763.5" r="8" fill="#2e4a36"/><circle cx="38" cy="763.5" r="4" fill="#22c55e"/>
-        <text x="58" y="770" font-size="19.5" fill="#e2e2e3">Copy or download HTML</text>
-        <circle cx="38" cy="809.5" r="8" fill="#2e4a36"/><circle cx="38" cy="809.5" r="4" fill="#22c55e"/>
-        <text x="58" y="816" font-size="19.5" fill="#e2e2e3">{{unsubscribe_url}} left for Migma</text>
-      </g>
-
-
-    </g>
-  </svg>
+    <p>Four steps, one surface. Auto-advances every 4s — hover to pause, click a step to jump.</p></div>
+  <div class="flow" id="flowRoot">
+    <div class="flow-steps" role="tablist" aria-label="Flow steps">
+      <button class="flow-step is-active" role="tab" aria-selected="true" data-i="0">
+        <i class="flow-num" aria-hidden="true">1</i>
+        <span class="flow-tx"><b>Entry</b><s>You're listening in Spotify and think: my fans would love this as an email. Migma is right there — sidebar, topbar, or right-click.</s></span>
+        <span class="flow-prog" aria-hidden="true"></span>
+      </button>
+      <button class="flow-step" role="tab" aria-selected="false" data-i="1">
+        <i class="flow-num" aria-hidden="true">2</i>
+        <span class="flow-tx"><b>Pick a playlist</b><s>Connect once, pick the playlist. Migma reads it like a person would: 128 tracks, night listeners, indie sleaze and shoegaze.</s></span>
+        <span class="flow-prog" aria-hidden="true"></span>
+      </button>
+      <button class="flow-step" role="tab" aria-selected="false" data-i="2">
+        <i class="flow-num" aria-hidden="true">3</i>
+        <span class="flow-tx"><b>Choose &amp; refine</b><s>One line of direction — direct tone, standard length, Listen now button — and Migma writes the whole email in front of you.</s></span>
+        <span class="flow-prog" aria-hidden="true"></span>
+      </button>
+      <button class="flow-step" role="tab" aria-selected="false" data-i="3">
+        <i class="flow-num" aria-hidden="true">4</i>
+        <span class="flow-tx"><b>Review &amp; export</b><s>Read it, copy the HTML or save to Migma. Sending and lists stay in Migma; nothing sends until you say so.</s></span>
+        <span class="flow-prog" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div class="flow-stage">
+      <img class="flow-shot is-active" src="assets/flow/flow-entry.png" alt="Entry points — Migma in the Spotify sidebar, topbar and right-click menu" loading="lazy">
+      <img class="flow-shot" src="assets/flow/flow-source.png" alt="Source picker — choose a playlist and read its audience" loading="lazy">
+      <img class="flow-shot" src="assets/flow/flow-canvas.png" alt="Canvas — the brief on the left, the generated email on the right" loading="lazy">
+      <img class="flow-shot" src="assets/flow/flow-deliver.png" alt="Deliver — the exported campaign, ready to copy or download" loading="lazy">
+    </div>
+  </div>
 </section>
 
 <section class="sec">
@@ -856,6 +816,37 @@ const set = m => {
 document.getElementById('t-wire').onclick = () => set('wire');
 document.getElementById('t-hifi').onclick = () => set('hifi');
 addEventListener('keydown', e => { if (e.key === 'w') set(root.dataset.fid === 'wire' ? 'hifi' : 'wire'); });
+
+/* Flow: auto-rotating feature steps. Vanilla, no deps. Auto-advance every 4s, pause on hover,
+   click a step to jump and pause. prefers-reduced-motion disables auto-rotation entirely. */
+(function () {
+  const flowRoot = document.getElementById('flowRoot');
+  if (!flowRoot) return;
+  const steps = [].slice.call(flowRoot.querySelectorAll('.flow-step'));
+  const shots = [].slice.call(flowRoot.querySelectorAll('.flow-shot'));
+  const DUR = 4000;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i = 0, timer = null, userPaused = false;
+
+  function show(n) {
+    i = (n + steps.length) % steps.length;
+    steps.forEach((s, k) => {
+      const on = k === i;
+      s.classList.toggle('is-active', on);
+      s.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    shots.forEach((s, k) => s.classList.toggle('is-active', k === i));
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  function start() { if (reduce || userPaused || timer) return; timer = setInterval(() => show(i + 1), DUR); }
+
+  steps.forEach((s, k) => s.addEventListener('click', () => { userPaused = true; stop(); show(k); }));
+  flowRoot.addEventListener('mouseenter', stop);
+  flowRoot.addEventListener('mouseleave', start);
+
+  show(0);
+  start();
+})();
 </script>
 </body>
 </html>
