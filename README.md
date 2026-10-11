@@ -3,7 +3,7 @@
 Migma has plugins for ChatGPT, Claude and Slack. Nothing for the 600M-user music industry. This is
 that plugin, designed and running.
 
-[Live storyboard](TODO-VERCEL-LINK)
+[Live storyboard](https://migma-wireframe.vercel.app/)
 
 ![60-second run of the live plugin](TODO-DEMO-GIF)
 
