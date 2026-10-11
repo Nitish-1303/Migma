@@ -95,6 +95,9 @@ Spotify and holds nothing of Migma's.
 | `style.css` | Everything visual; both theme token sets, the email token set, and every rule |
 | `MigmaAIDisplayTitle-Bold.woff2` | Migma's display face, used for every heading |
 | `MigmaAIDisplayTitle-BoldItalic.woff2` | Italic cut of the same face |
+| `migma-app-logo-512.webp` | The gradient Migma M, used as the in-UI mark |
+| `migma-app-icon-512.webp` | The dark squircle app icon |
+| `migma-wordmark-white.png` | White wordmark, for dark backgrounds |
 | `test/client.test.cjs` | Headless integration tests (`node --test CustomApps/migma/test/client.test.cjs`) |
 
 ## The three steps
@@ -211,10 +214,11 @@ Contrast is measured against the substrate a run lands on, not against the page.
 are accents only — they never carry body text or paint the shell. Text tiers hold a 4.5:1 WCAG AA floor;
 the one documented exemption is `.mg-select:disabled`, which WCAG exempts as an inactive component.
 
-Both `.woff2` files are bundled so headings render offline; each `@font-face` lists the local file first
-and `https://migma.ai/fonts/…` second, then falls through to the system sans if Spotify's CSP blocks the
-remote fetch. The plugin never paints Spotify's green itself — that colour arrives from the client's own
-chrome around it.
+Both `.woff2` files are bundled and are the only source `@font-face` names — the plugin makes no
+remote request for a font — falling through to the system sans if the local face is unavailable. The
+in-UI mark, app icon and wordmark are bundled `.webp`/`.png` too, so the app references nothing off-box.
+The plugin never paints Spotify's green itself — that colour arrives from the client's own chrome
+around it.
 
 ## What it reads
 
